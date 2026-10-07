@@ -22,6 +22,7 @@ npx eas-cli@latest <cmd>    # EAS builds, submits, and updates (use instead of b
 - Routes live in `src/app/`: every file is a screen and `_layout.tsx` files define navigators. API routes are `src/app/api/*+api.ts`. Keep components, hooks, and utils outside `src/app/`.
 - `ios/` and `android/` are generated. Never create or edit them by hand; configure native behavior in `app.json` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, switch to a development build (`npx expo run:ios`).
+- Styling is NativeWind v5 (`className`) on Tailwind v4, configured CSS-first in `src/global.css` (imported once in `src/app/_layout.tsx`). Docs: https://www.nativewind.dev/v5/llms-full.txt. Keep `nativewind` and `react-native-css` pinned as a matching RC pair, and `tailwindcss`, `@tailwindcss/postcss`, and `lightningcss` (plus its `overrides` entry) pinned exactly. Metro's `withNativewind` does the transform, so there is no `babel.config.js`. Use `useColorScheme` from `react-native`, not `nativewind`.
 
 ## Who owns what
 
