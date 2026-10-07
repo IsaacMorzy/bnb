@@ -74,6 +74,16 @@ Designs are attached in the chat. Screens must match them exactly: layout, spaci
 - UI plans describe the design (elements, states, tokens, assets) well enough to build without the image. If building in a new session, ask for the design to be attached again.
 - After building, open the screen in the iOS simulator (deep link with `xcrun simctl openurl booted <url>` when it isn't the first screen; the scheme is in `app.json`), take a screenshot (`xcrun simctl io booted screenshot <path>`), and compare it with the design. List every difference, fix, and repeat. Report which values were estimated from an image.
 
+## Design system
+
+- Tokens live only in `src/global.css` `@theme` (colors, 4px `--spacing`, fonts, `--text-*` ramp, radius, shadows); Tailwind's default palette, ramp, radii and shadows are cleared. JS-only values (motion) live in `src/theme/`. No hex, font size, or arbitrary `[..]` class outside `global.css`.
+- `--text-*--line-height` must be a unitless ratio: NativeWind multiplies it by the font size, so `px` values break layout.
+- Text goes through `<Text variant tone>` and icons through `<Icon name tone>` (expo-symbols, names registered in `src/components/ui/icons.ts`). Color is a `tone` prop, never a second `text-*` class, because conflicting classes resolve by CSS order.
+- Font is Plus Jakarta Sans (static TTFs in `assets/fonts/`), loaded with `useFonts` in the root layout behind the splash screen. Switch to the `expo-font` config plugin once the app runs on a development build. Weight comes from the family (`font-jakarta-bold`), never from `font-bold`.
+- Light mode only (`userInterfaceStyle: "light"`). Add dark values as `prefers-color-scheme` overrides of the same tokens.
+- Primitives live in `src/components/ui/` and take `className` (layout only) and `style` (merged last). Promote other views there only once two screens use them. Native controls (Switch) stay native and get colors through `styled` mappings.
+- `src/app/index.tsx` is a temporary design-system preview (`?y=<offset>` opens it scrolled) until the home screen replaces it.
+
 ## Reporting
 
 End every piece of work that changes code (features and fixes, not answers to questions) with this report. Use these headings in this order, and leave out any section that would be empty.
