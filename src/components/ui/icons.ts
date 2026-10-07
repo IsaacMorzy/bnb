@@ -9,8 +9,10 @@ export const icons = {
   calendar: { ios: "calendar", android: "calendar_today", web: "calendar_today" },
   person: { ios: "person", android: "person", web: "person" },
   settings: { ios: "gearshape", android: "settings", web: "settings" },
+  marker: { ios: "mappin", android: "location_on", web: "location_on" }, // map marker on photos
   pin: { ios: "mappin.and.ellipse", android: "location_on", web: "location_on" },
   filters: { ios: "slider.horizontal.3", android: "tune", web: "tune" },
+  arrowLeft: { ios: "arrow.left", android: "arrow_back", web: "arrow_back" },
   arrowRight: { ios: "arrow.right", android: "arrow_forward", web: "arrow_forward" },
   chevronRight: { ios: "chevron.right", android: "chevron_right", web: "chevron_right" },
   close: { ios: "xmark", android: "close", web: "close" },

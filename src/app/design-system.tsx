@@ -1,0 +1,228 @@
+import { Stack, useLocalSearchParams } from "expo-router";
+import { useRef, useState, type ReactNode } from "react";
+import { ScrollView, View } from "react-native";
+
+import {
+  Alert,
+  Badge,
+  Button,
+  Chip,
+  Icon,
+  IconButton,
+  SegmentedControl,
+  Stepper,
+  Text,
+  TextField,
+  Toggle,
+  textVariants,
+  type IconName,
+  type TextVariant,
+} from "@/components/ui";
+
+// Design system preview. Open with airbnbrecord://design-system.
+
+const swatches = [
+  { name: "primary", className: "bg-primary" },
+  { name: "lavender", className: "bg-lavender" },
+  { name: "ink", className: "bg-ink" },
+  { name: "ink-muted", className: "bg-ink-muted" },
+  { name: "surface", className: "bg-surface border border-border" },
+  { name: "surface-muted", className: "bg-surface-muted border border-border" },
+  { name: "border", className: "bg-border" },
+  { name: "accent", className: "bg-accent" },
+  { name: "success", className: "bg-success" },
+  { name: "danger", className: "bg-danger" },
+  { name: "info", className: "bg-info" },
+  { name: "lavender-soft", className: "bg-lavender-soft" },
+];
+
+const iconSet: IconName[] = ["home", "search", "heart", "calendar", "person", "settings", "pin", "filters"];
+
+const categories: { label: string; icon: IconName }[] = [
+  { label: "All Stays", icon: "home" },
+  { label: "Cabins", icon: "cabin" },
+  { label: "Beach", icon: "beach" },
+  { label: "City", icon: "city" },
+  { label: "Villas", icon: "villa" },
+];
+
+export default function DesignSystem() {
+  // Dev aid: open with ?y=<offset> to land on a section when taking screenshots.
+  const { y } = useLocalSearchParams<{ y?: string }>();
+  const scrollRef = useRef<ScrollView>(null);
+  const [filters, setFilters] = useState(["Cabins"]);
+  const [category, setCategory] = useState("All Stays");
+  const [view, setView] = useState<"list" | "map">("list");
+  const [enabled, setEnabled] = useState(true);
+  const [guests, setGuests] = useState(1);
+  const [alerts, setAlerts] = useState({ success: true, danger: true });
+
+  const toggleFilter = (label: string) =>
+    setFilters((f) => (f.includes(label) ? f.filter((x) => x !== label) : [...f, label]));
+
+  return (
+    <>
+      <Stack.Screen options={{ title: "Design system", headerShown: true }} />
+      <ScrollView
+        className="flex-1 bg-surface-muted"
+        contentContainerClassName="gap-4 px-5 py-6"
+        ref={scrollRef}
+        onContentSizeChange={() => y && scrollRef.current?.scrollTo({ y: Number(y), animated: false })}
+      >
+        <Section title="Brand">
+          <Text variant="display">roam</Text>
+          <Text variant="title" tone="muted">
+            Find unforgettable stays for every kind of trip.
+          </Text>
+        </Section>
+
+        <Section title="Color palette">
+          <View className="flex-row flex-wrap gap-3">
+            {swatches.map((s) => (
+              <View key={s.name} className="w-24 gap-1">
+                <View className={`h-12 rounded-md corner-squircle ${s.className}`} />
+                <Text variant="footnote" tone="muted">
+                  {s.name}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </Section>
+
+        <Section title="Typography">
+          {(Object.keys(textVariants) as TextVariant[]).map((v) => (
+            <View key={v} className="gap-1">
+              <Text variant="footnote" tone="subtle">
+                {v}
+              </Text>
+              <Text variant={v}>{v === "display" ? "Find your next stay" : "Modern Cabin with Hot Tub"}</Text>
+            </View>
+          ))}
+        </Section>
+
+        <Section title="Buttons">
+          <Button title="Book this stay" trailingIcon="arrowRight" />
+          <Button
+            title="Continue with Google"
+            variant="secondary"
+            // PLACEHOLDER: the Google "G" logo is not in assets/ yet.
+            icon={
+              <View className="size-6 items-center justify-center rounded-full bg-surface-muted">
+                <Text variant="footnote">G</Text>
+              </View>
+            }
+          />
+          <View className="flex-row gap-3">
+            <Button title="Loading" loading className="flex-1" />
+            <Button title="Disabled" disabled className="flex-1" />
+          </View>
+          <View className="flex-row gap-4">
+            <IconButton icon="heart" accessibilityLabel="Save" />
+            <IconButton icon="share" accessibilityLabel="Share" />
+            <IconButton icon="search" accessibilityLabel="Search" />
+            <IconButton icon="bookmark" accessibilityLabel="Bookmark" />
+          </View>
+        </Section>
+
+        <Section title="Input fields">
+          <TextField
+            icon="search"
+            defaultValue="Cabins in California"
+            accessory={<IconButton icon="filters" size="sm" accessibilityLabel="Filters" variant="ghost" />}
+          />
+          <TextField icon="person" placeholder="Enter your name" />
+          <TextField icon="person" defaultValue="Joanna Smith" />
+          <TextField icon="lock" defaultValue="password1" secure />
+        </Section>
+
+        <Section title="Filter chips">
+          <View className="flex-row flex-wrap gap-2">
+            {["Cabins", "Under $300", "Pet Friendly", "Quiet"].map((label) => (
+              <Chip
+                key={label}
+                label={label}
+                selected={filters.includes(label)}
+                onPress={() => toggleFilter(label)}
+              />
+            ))}
+          </View>
+          <View className="flex-row flex-wrap gap-2">
+            {categories.map((c) => (
+              <Chip
+                key={c.label}
+                label={c.label}
+                icon={c.icon}
+                size="sm"
+                tone="primary"
+                selected={category === c.label}
+                onPress={() => setCategory(c.label)}
+              />
+            ))}
+          </View>
+        </Section>
+
+        <Section title="Iconography">
+          <View className="flex-row flex-wrap gap-3">
+            {iconSet.map((name) => (
+              <View key={name} className="size-12 items-center justify-center rounded-full bg-surface-muted">
+                <Icon name={name} />
+              </View>
+            ))}
+          </View>
+        </Section>
+
+        <Section title="Segmented control">
+          <SegmentedControl
+            value={view}
+            onChange={setView}
+            options={[
+              { value: "list", label: "List", icon: "list" },
+              { value: "map", label: "Map", icon: "map" },
+            ]}
+          />
+        </Section>
+
+        <Section title="Toggles / steppers">
+          <View className="flex-row items-center gap-6">
+            <Toggle value={enabled} onValueChange={setEnabled} accessibilityLabel="Instant book" />
+            <Stepper value={guests} onChange={setGuests} min={1} max={16} accessibilityLabel="Guests" />
+          </View>
+        </Section>
+
+        <Section title="Status / alerts">
+          {alerts.success && (
+            <Alert
+              message="Account created successfully"
+              onDismiss={() => setAlerts((a) => ({ ...a, success: false }))}
+            />
+          )}
+          {alerts.danger && (
+            <Alert
+              tone="danger"
+              message="Something went wrong. Please try again."
+              onDismiss={() => setAlerts((a) => ({ ...a, danger: false }))}
+            />
+          )}
+        </Section>
+
+        <Section title="Tags / badges">
+          <View className="flex-row flex-wrap gap-2">
+            <Badge label="Guest favorite" icon="star" />
+            <Badge label="New" tone="success" />
+            <Badge label="20% off" tone="promo" />
+            <Badge label="Superhost" tone="info" />
+          </View>
+        </Section>
+      </ScrollView>
+    </>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <View className="gap-4 rounded-lg corner-squircle bg-surface p-5 shadow-card">
+      <Text variant="subtitle">{title}</Text>
+      {children}
+    </View>
+  );
+}

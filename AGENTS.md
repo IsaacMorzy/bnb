@@ -28,7 +28,7 @@ npx eas-cli@latest <cmd>    # EAS builds, submits, and updates (use instead of b
 
 Each tool has one job. Ask before moving a responsibility to a different tool.
 
-- **Auth:** Clerk is the source of truth. The app keeps its own custom auth screens. Set Clerk up through the Clerk CLI and use the Clerk MCP for current Expo patterns.
+- **Auth:** Clerk is the source of truth. The app keeps its own custom auth screens in the `(auth)` route group (`sign-in`, `sign-up`), which are stubs until Clerk is set up. Set Clerk up through the Clerk CLI and use the Clerk MCP for current Expo patterns.
 - **Content:** Sanity (properties, hosts, policies, house rules). Studio is a standalone app in `studio/`. Schema deploys and content changes go through the Sanity MCP, and generated property copy uses Agent Actions.
 - **Exact constraints** (price, guests, type, amenities, pets, place): GROQ filters, with values always passed as params.
 - **Soft intent** (quiet, cozy, secluded): Dataset Embeddings via `text::semanticSimilarity()` inside `score()`.
@@ -82,7 +82,8 @@ Designs are attached in the chat. Screens must match them exactly: layout, spaci
 - Font is Plus Jakarta Sans (static TTFs in `assets/fonts/`), loaded with `useFonts` in the root layout behind the splash screen. Switch to the `expo-font` config plugin once the app runs on a development build. Weight comes from the family (`font-jakarta-bold`), never from `font-bold`.
 - Light mode only (`userInterfaceStyle: "light"`). Add dark values as `prefers-color-scheme` overrides of the same tokens.
 - Primitives live in `src/components/ui/` and take `className` (layout only) and `style` (merged last). Promote other views there only once two screens use them. Native controls (Switch) stay native and get colors through `styled` mappings.
-- `src/app/index.tsx` is a temporary design-system preview (`?y=<offset>` opens it scrolled) until the home screen replaces it.
+- `src/app/index.tsx` redirects to `/onboarding`; once Clerk lands it chooses onboarding or home from the session. The design-system preview lives at `/design-system` (`?y=<offset>` opens it scrolled).
+- Third-party views (`expo-image`, `GlassView`, `react-native-svg`) need `styled(X, { className: "style" })` before `className` works. SVG fills come from token classes through `nativeStyleMapping: { color: "fill" }`.
 
 ## Reporting
 
