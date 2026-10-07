@@ -10,10 +10,12 @@ const variants = {
   muted: "bg-surface-muted",
   surface: "bg-surface", // on photos and colored backgrounds
   ghost: "", // inside fields and rows
+  outline: "border border-border bg-surface", // back button on auth screens
 } as const;
 
 const sizes = {
   md: { container: "size-14", icon: 24 },
+  nav: { container: "size-12", icon: 22 },
   sm: { container: "size-9", icon: 18 },
 } as const;
 

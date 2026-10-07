@@ -18,6 +18,7 @@ export const icons = {
   close: { ios: "xmark", android: "close", web: "close" },
   share: { ios: "square.and.arrow.up", android: "ios_share", web: "ios_share" },
   bookmark: { ios: "bookmark", android: "bookmark", web: "bookmark" },
+  mail: { ios: "envelope", android: "mail", web: "mail" },
   lock: { ios: "lock", android: "lock", web: "lock" },
   eye: { ios: "eye", android: "visibility", web: "visibility" },
   eyeOff: { ios: "eye.slash", android: "visibility_off", web: "visibility_off" },
@@ -33,6 +34,7 @@ export const icons = {
   map: { ios: "map", android: "map", web: "map" },
   list: { ios: "list.bullet", android: "list", web: "list" },
   success: { ios: "checkmark.circle.fill", android: "check_circle", web: "check_circle" },
+  apple: { ios: "apple.logo", android: "phone_iphone", web: "phone_iphone" }, // iOS-only button; Material has no Apple logo
   error: { ios: "exclamationmark.circle.fill", android: "error", web: "error" },
 } as const satisfies Record<string, Exclude<SymbolViewProps["name"], string>>;
 

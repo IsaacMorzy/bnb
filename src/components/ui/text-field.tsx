@@ -1,10 +1,11 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, type Ref } from "react";
 import { Pressable, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from "react-native";
 
 import { cn } from "@/lib/cn";
 
 import { Icon } from "./icon";
 import type { IconName } from "./icons";
+import { Text } from "./text";
 
 export type TextFieldProps = Omit<TextInputProps, "style" | "secureTextEntry"> & {
   icon?: IconName;
@@ -12,6 +13,10 @@ export type TextFieldProps = Omit<TextInputProps, "style" | "secureTextEntry"> &
   accessory?: ReactNode;
   /** Masks the value and adds a show/hide toggle. */
   secure?: boolean;
+  /** Shown above the value, inside the field (the auth forms' two-line layout). */
+  label?: string;
+  invalid?: boolean;
+  ref?: Ref<TextInput>;
   className?: string;
   style?: StyleProp<ViewStyle>;
 };
@@ -20,6 +25,9 @@ export function TextField({
   icon,
   accessory,
   secure,
+  label,
+  invalid,
+  ref,
   className,
   style,
   onFocus,
@@ -29,29 +37,50 @@ export function TextField({
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
+  const input = (
+    <TextInput
+      ref={ref}
+      accessibilityLabel={label}
+      className={cn(
+        "font-jakarta text-body text-ink placeholder:text-ink-subtle selection:text-lavender",
+        label ? "h-6 py-0" : "h-full flex-1",
+      )}
+      secureTextEntry={secure && !revealed}
+      onFocus={(e) => {
+        setFocused(true);
+        onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        setFocused(false);
+        onBlur?.(e);
+      }}
+      {...props}
+    />
+  );
+
   return (
     <View
       className={cn(
-        "h-14 flex-row items-center gap-3 rounded-lg corner-squircle border-2 px-4",
-        focused ? "border-lavender bg-lavender-soft" : "border-border/50 bg-surface-muted",
+        "flex-row items-center rounded-lg corner-squircle border-2",
+        label ? "h-16 gap-7 px-5" : "h-14 gap-3 px-4",
+        invalid
+          ? "border-danger bg-danger-soft"
+          : focused
+            ? "border-lavender bg-lavender-soft"
+            : "border-border/50 bg-surface-muted",
         className,
       )}
       style={style}
     >
       {icon && <Icon name={icon} />}
-      <TextInput
-        className="h-full flex-1 font-jakarta text-body text-ink placeholder:text-ink-subtle selection:text-lavender"
-        secureTextEntry={secure && !revealed}
-        onFocus={(e) => {
-          setFocused(true);
-          onFocus?.(e);
-        }}
-        onBlur={(e) => {
-          setFocused(false);
-          onBlur?.(e);
-        }}
-        {...props}
-      />
+      {label ? (
+        <View className="flex-1">
+          <Text variant="label">{label}</Text>
+          {input}
+        </View>
+      ) : (
+        input
+      )}
       {secure ? (
         <Pressable
           accessibilityRole="button"

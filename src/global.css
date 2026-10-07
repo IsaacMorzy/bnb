@@ -47,6 +47,9 @@
   --text-hero: 44px; /* * onboarding headline */
   --text-hero--line-height: 0.9545; /* 42px */
   --text-hero--letter-spacing: -1.5px; /* * */
+  --text-headline: 40px; /* * auth headline */
+  --text-headline--line-height: 1; /* 40px */
+  --text-headline--letter-spacing: -1.5px; /* * */
   --text-heading: 28px;
   --text-heading--line-height: 1.2143; /* 34px */
   --text-heading--letter-spacing: -0.5px; /* * */

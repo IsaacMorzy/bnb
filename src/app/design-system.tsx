@@ -121,6 +121,7 @@ export default function DesignSystem() {
             <IconButton icon="share" accessibilityLabel="Share" />
             <IconButton icon="search" accessibilityLabel="Search" />
             <IconButton icon="bookmark" accessibilityLabel="Bookmark" />
+            <IconButton icon="arrowLeft" variant="outline" size="nav" accessibilityLabel="Back" />
           </View>
         </Section>
 
@@ -133,6 +134,8 @@ export default function DesignSystem() {
           <TextField icon="person" placeholder="Enter your name" />
           <TextField icon="person" defaultValue="Joanna Smith" />
           <TextField icon="lock" defaultValue="password1" secure />
+          <TextField icon="mail" label="Email address" placeholder="you@example.com" />
+          <TextField icon="mail" label="Email address" defaultValue="not-an-email" invalid />
         </Section>
 
         <Section title="Filter chips">

@@ -1,0 +1,71 @@
+import { styled } from "nativewind";
+import { useState, type ReactNode } from "react";
+import { ActivityIndicator, Platform, Pressable, View } from "react-native";
+
+import { GoogleMark } from "@/components/onboarding/google-mark";
+import { Icon, Text } from "@/components/ui";
+import { authErrorMessage, signInWithProvider, type Provider } from "@/lib/auth/mock";
+
+const Spinner = styled(ActivityIndicator, {
+  className: { target: "style", nativeStyleMapping: { color: "color" } },
+});
+
+// Sign in with Apple is an iOS flow, so Android only offers Google.
+const providers: { id: Provider; title: string; mark: ReactNode }[] = [
+  { id: "google", title: "Continue with Google", mark: <GoogleMark /> },
+  ...(Platform.OS === "ios"
+    ? [{ id: "apple" as const, title: "Continue with Apple", mark: <Icon name="apple" size={26} /> }]
+    : []),
+];
+
+export function SocialButtons({
+  disabled,
+  onBusyChange,
+  onSuccess,
+  onError,
+}: {
+  /** True while the form above is submitting. */
+  disabled?: boolean;
+  onBusyChange?: (busy: boolean) => void;
+  onSuccess: () => void;
+  onError: (message: string) => void;
+}) {
+  const [busy, setBusy] = useState<Provider | null>(null);
+
+  const start = async (provider: Provider) => {
+    setBusy(provider);
+    onBusyChange?.(true);
+    try {
+      await signInWithProvider(provider);
+      onSuccess();
+    } catch (e) {
+      onError(authErrorMessage(e));
+    } finally {
+      setBusy(null);
+      onBusyChange?.(false);
+    }
+  };
+
+  return (
+    <View className="mt-3 gap-4">
+      {providers.map((p) => {
+        const inactive = disabled || busy !== null;
+        return (
+          <Pressable
+            key={p.id}
+            accessibilityRole="button"
+            accessibilityLabel={p.title}
+            accessibilityState={{ disabled: inactive, busy: busy === p.id }}
+            disabled={inactive}
+            onPress={() => start(p.id)}
+            // The design left-aligns both titles at the same x instead of centering them.
+            className="h-12 flex-row items-center gap-7 rounded-full border border-border bg-surface pl-18 active:opacity-70"
+          >
+            <View className="w-9 items-center">{busy === p.id ? <Spinner className="text-ink" /> : p.mark}</View>
+            <Text variant="buttonSecondary">{p.title}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
