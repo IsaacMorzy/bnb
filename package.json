@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@clerk/expo": "^4.8.1",
     "@expo/ui": "~57.0.22",
     "expo": "~57.0.27",
     "expo-constants": "~57.0.21",
@@ -51,5 +52,6 @@
   "private": true,
   "overrides": {
     "lightningcss": "1.30.1"
-  }
+  },
+  "packageManager": "yarn@4.4.1+sha224.fd21d9eb5fba020083811af1d4953acc21eeb9f6ff97efd1b3f9d4de"
 }
