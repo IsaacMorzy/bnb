@@ -1,22 +1,22 @@
+import { useSignUp } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
-import { type TextInput } from "react-native";
+import { View, type TextInput } from "react-native";
 
 import { AuthFooter } from "@/components/auth/auth-footer";
 import { AuthScreen } from "@/components/auth/auth-screen";
 import { FormError } from "@/components/auth/form-error";
 import { OrDivider } from "@/components/auth/or-divider";
 import { SocialButtons } from "@/components/auth/social-buttons";
-import { useEnterApp } from "@/components/auth/use-enter-app";
 import { Button, TextField } from "@/components/ui";
-import { authErrorMessage, signUp } from "@/lib/auth/mock";
+import { authErrorMessage } from "@/lib/auth/errors";
 import { firstError, validateSignUp, type FieldErrors } from "@/lib/auth/validate";
 
 type Field = "name" | "email" | "password";
 
 export default function SignUp() {
   const router = useRouter();
-  const enterApp = useEnterApp();
+  const { signUp } = useSignUp();
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
 
@@ -42,8 +42,19 @@ export default function SignUp() {
     setSubmitting(true);
     try {
       const email = values.email.trim();
-      await signUp({ ...values, name: values.name.trim(), email });
-      router.push({ pathname: "/verify", params: { email } });
+      const [firstName, ...rest] = values.name.trim().split(/\s+/);
+      const created = await signUp.password({
+        emailAddress: email,
+        password: values.password,
+        firstName,
+        lastName: rest.length ? rest.join(" ") : undefined,
+      });
+      if (created.error) return setAuthError(authErrorMessage(created.error));
+
+      const sent = await signUp.verifications.sendEmailCode();
+      if (sent.error) return setAuthError(authErrorMessage(sent.error));
+
+      router.push({ pathname: "/verify", params: { email, flow: "sign-up" } });
     } catch (e) {
       setAuthError(authErrorMessage(e));
     } finally {
@@ -117,7 +128,9 @@ export default function SignUp() {
       <FormError message={authError ?? firstError(errors)} />
       <Button title="Create account" trailingIcon="arrowRight" loading={submitting} disabled={socialBusy} onPress={submit} className="mt-6" />
       <OrDivider />
-      <SocialButtons disabled={submitting} onBusyChange={setSocialBusy} onSuccess={enterApp} onError={setAuthError} />
+      <SocialButtons disabled={submitting} onBusyChange={setSocialBusy} onError={setAuthError} />
+      {/* Mount point for Clerk's bot protection; takes no space. */}
+      <View nativeID="clerk-captcha" />
     </AuthScreen>
   );
 }

@@ -1,3 +1,4 @@
+import { useSignIn, useSignUp } from "@clerk/expo";
 import { Redirect, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 
@@ -5,16 +6,26 @@ import { AuthFooter } from "@/components/auth/auth-footer";
 import { AuthScreen } from "@/components/auth/auth-screen";
 import { CodeInput } from "@/components/auth/code-input";
 import { FormError } from "@/components/auth/form-error";
-import { useEnterApp } from "@/components/auth/use-enter-app";
 import { Alert, Button } from "@/components/ui";
-import { authErrorMessage, resendCode, verifyEmail } from "@/lib/auth/mock";
+import { authErrorMessage } from "@/lib/auth/errors";
+import { finalizeOptions } from "@/lib/auth/session";
 import { validateCode } from "@/lib/auth/validate";
 
 const RESEND_SECONDS = 30;
 
+/** Confirms a sign-up's email, or a new device on sign-in, with a 6-digit email code. */
 export default function Verify() {
-  const { email } = useLocalSearchParams<{ email?: string }>();
-  const enterApp = useEnterApp();
+  const { email, flow = "sign-up" } = useLocalSearchParams<{ email?: string; flow?: "sign-up" | "sign-in" }>();
+  const { signUp } = useSignUp();
+  const { signIn } = useSignIn();
+
+  // Read once: after a successful verify the attempt is complete, and the
+  // screen must not redirect while the session is being activated.
+  const [pending] = useState(() =>
+    flow === "sign-in"
+      ? signIn.status === "needs_client_trust"
+      : signUp.status === "missing_requirements" && signUp.unverifiedFields.includes("email_address"),
+  );
 
   const [code, setCode] = useState("");
   const [error, setError] = useState<string>();
@@ -29,7 +40,7 @@ export default function Verify() {
     return () => clearTimeout(timer);
   }, [wait]);
 
-  if (!email) return <Redirect href="/sign-up" />;
+  if (!email || !pending) return <Redirect href={flow === "sign-in" ? "/sign-in" : "/sign-up"} />;
 
   const submit = async (value = code) => {
     const found = validateCode(value).code;
@@ -39,8 +50,19 @@ export default function Verify() {
 
     setSubmitting(true);
     try {
-      await verifyEmail({ email, code: value });
-      enterApp();
+      if (flow === "sign-in") {
+        const { error: failed } = await signIn.mfa.verifyEmailCode({ code: value });
+        if (failed) return setError(authErrorMessage(failed));
+        if (signIn.status !== "complete") return setError(authErrorMessage(undefined));
+        const { error: unfinished } = await signIn.finalize(finalizeOptions);
+        if (unfinished) setError(authErrorMessage(unfinished));
+      } else {
+        const { error: failed } = await signUp.verifications.verifyEmailCode({ code: value });
+        if (failed) return setError(authErrorMessage(failed));
+        if (signUp.status !== "complete") return setError(authErrorMessage(undefined));
+        const { error: unfinished } = await signUp.finalize(finalizeOptions);
+        if (unfinished) setError(authErrorMessage(unfinished));
+      }
     } catch (e) {
       setError(authErrorMessage(e));
     } finally {
@@ -58,7 +80,9 @@ export default function Verify() {
     setResending(true);
     setError(undefined);
     try {
-      await resendCode({ email });
+      const { error: failed } =
+        flow === "sign-in" ? await signIn.mfa.sendEmailCode() : await signUp.verifications.sendEmailCode();
+      if (failed) return setError(authErrorMessage(failed));
       setResent(true);
       setWait(RESEND_SECONDS);
     } catch (e) {
@@ -71,7 +95,9 @@ export default function Verify() {
   return (
     <AuthScreen
       title={"Check your\nemail"}
-      body={`We sent a 6-digit code to ${email}. Enter it below to finish creating your account.`}
+      body={`We sent a 6-digit code to ${email}. Enter it below to ${
+        flow === "sign-in" ? "confirm it's you." : "finish creating your account."
+      }`}
       footer={
         <AuthFooter
           prompt="Didn't get a code?"

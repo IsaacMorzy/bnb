@@ -1,22 +1,23 @@
+import { useSignIn } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
-import { type TextInput } from "react-native";
+import { View, type TextInput } from "react-native";
 
 import { AuthFooter } from "@/components/auth/auth-footer";
 import { AuthScreen } from "@/components/auth/auth-screen";
 import { FormError } from "@/components/auth/form-error";
 import { OrDivider } from "@/components/auth/or-divider";
 import { SocialButtons } from "@/components/auth/social-buttons";
-import { useEnterApp } from "@/components/auth/use-enter-app";
 import { Button, TextField } from "@/components/ui";
-import { authErrorMessage, signIn } from "@/lib/auth/mock";
+import { authErrorMessage } from "@/lib/auth/errors";
+import { finalizeOptions } from "@/lib/auth/session";
 import { firstError, validateSignIn, type FieldErrors } from "@/lib/auth/validate";
 
 type Field = "email" | "password";
 
 export default function SignIn() {
   const router = useRouter();
-  const enterApp = useEnterApp();
+  const { signIn } = useSignIn();
   const passwordRef = useRef<TextInput>(null);
 
   const [values, setValues] = useState<Record<Field, string>>({ email: "", password: "" });
@@ -40,8 +41,26 @@ export default function SignIn() {
 
     setSubmitting(true);
     try {
-      await signIn({ email: values.email.trim(), password: values.password });
-      enterApp();
+      const email = values.email.trim();
+      const { error } = await signIn.password({ emailAddress: email, password: values.password });
+      if (error) return setAuthError(authErrorMessage(error));
+
+      if (signIn.status === "complete") {
+        const { error: unfinished } = await signIn.finalize(finalizeOptions);
+        if (unfinished) setAuthError(authErrorMessage(unfinished));
+        return;
+      }
+
+      // Clerk asks for an email code when a password sign-in comes from a new device.
+      const canTrust = signIn.supportedSecondFactors.some((f) => f.strategy === "email_code");
+      if (signIn.status === "needs_client_trust" && canTrust) {
+        const { error: unsent } = await signIn.mfa.sendEmailCode();
+        if (unsent) return setAuthError(authErrorMessage(unsent));
+        router.push({ pathname: "/verify", params: { email, flow: "sign-in" } });
+        return;
+      }
+
+      setAuthError(authErrorMessage(undefined));
     } catch (e) {
       setAuthError(authErrorMessage(e));
     } finally {
@@ -98,7 +117,9 @@ export default function SignIn() {
       <FormError message={authError ?? firstError(errors)} />
       <Button title="Sign in" trailingIcon="arrowRight" loading={submitting} disabled={socialBusy} onPress={submit} className="mt-6" />
       <OrDivider />
-      <SocialButtons disabled={submitting} onBusyChange={setSocialBusy} onSuccess={enterApp} onError={setAuthError} />
+      <SocialButtons disabled={submitting} onBusyChange={setSocialBusy} onError={setAuthError} />
+      {/* Mount point for Clerk's bot protection, since SSO can create a sign-up; takes no space. */}
+      <View nativeID="clerk-captcha" />
     </AuthScreen>
   );
 }

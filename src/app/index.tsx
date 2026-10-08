@@ -1,6 +1,8 @@
+import { useAuth } from "@clerk/expo";
 import { Redirect } from "expo-router";
 
-// Once Clerk lands, this chooses between onboarding and home from the session.
+// The anchor route: the root layout only renders once Clerk has loaded.
 export default function Index() {
-  return <Redirect href="/onboarding" />;
+  const { isSignedIn } = useAuth();
+  return <Redirect href={isSignedIn ? "/home" : "/onboarding"} />;
 }

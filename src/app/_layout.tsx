@@ -1,4 +1,4 @@
-import { ClerkProvider } from "@clerk/expo";
+import { ClerkProvider, useAuth } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import "../global.css";
 
@@ -22,7 +22,21 @@ export default function RootLayout() {
     "PlusJakartaSans-SemiBold": require("@/assets/fonts/PlusJakartaSans-SemiBold.ttf"),
     "PlusJakartaSans-Bold": require("@/assets/fonts/PlusJakartaSans-Bold.ttf"),
   });
-  const ready = loaded || !!error;
+  const fontsReady = loaded || !!error;
+
+  return (
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      <RootNavigator fontsReady={fontsReady} />
+    </ClerkProvider>
+  );
+}
+
+// The splash stays up until Clerk has restored the session, so signed-in guests
+// never see onboarding flash. Each guard drops its screens and their history
+// when the session changes, and the index anchor sends the guest on.
+function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
+  const { isLoaded, isSignedIn } = useAuth();
+  const ready = fontsReady && isLoaded;
 
   useEffect(() => {
     if (ready) SplashScreen.hide();
@@ -31,8 +45,15 @@ export default function RootLayout() {
   if (!ready) return null;
 
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <Stack screenOptions={{ headerShown: false }} />
-    </ClerkProvider>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Protected guard={!isSignedIn}>
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+      <Stack.Protected guard={!!isSignedIn}>
+        <Stack.Screen name="(app)" />
+      </Stack.Protected>
+    </Stack>
   );
 }

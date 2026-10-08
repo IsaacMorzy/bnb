@@ -1,10 +1,13 @@
+import { useSSO } from "@clerk/expo";
 import { styled } from "nativewind";
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Platform, Pressable, View } from "react-native";
 
 import { GoogleMark } from "@/components/onboarding/google-mark";
 import { Icon, Text } from "@/components/ui";
-import { authErrorMessage, signInWithProvider, type Provider } from "@/lib/auth/mock";
+import { authErrorMessage } from "@/lib/auth/errors";
+
+type Provider = "oauth_google" | "oauth_apple";
 
 const Spinner = styled(ActivityIndicator, {
   className: { target: "style", nativeStyleMapping: { color: "color" } },
@@ -12,32 +15,38 @@ const Spinner = styled(ActivityIndicator, {
 
 // Sign in with Apple is an iOS flow, so Android only offers Google.
 const providers: { id: Provider; title: string; mark: ReactNode }[] = [
-  { id: "google", title: "Continue with Google", mark: <GoogleMark /> },
+  { id: "oauth_google", title: "Continue with Google", mark: <GoogleMark /> },
   ...(Platform.OS === "ios"
-    ? [{ id: "apple" as const, title: "Continue with Apple", mark: <Icon name="apple" size={26} /> }]
+    ? [{ id: "oauth_apple" as const, title: "Continue with Apple", mark: <Icon name="apple" size={26} /> }]
     : []),
 ];
 
 export function SocialButtons({
   disabled,
   onBusyChange,
-  onSuccess,
   onError,
 }: {
   /** True while the form above is submitting. */
   disabled?: boolean;
   onBusyChange?: (busy: boolean) => void;
-  onSuccess: () => void;
   onError: (message: string) => void;
 }) {
+  const { startSSOFlow } = useSSO();
   const [busy, setBusy] = useState<Provider | null>(null);
 
   const start = async (provider: Provider) => {
     setBusy(provider);
     onBusyChange?.(true);
     try {
-      await signInWithProvider(provider);
-      onSuccess();
+      // Opens the provider in a browser sheet. The root layout's guard moves the
+      // guest home once the session is active.
+      const { createdSessionId, setActive, signUp } = await startSSOFlow({ strategy: provider });
+      if (createdSessionId) {
+        await setActive?.({ session: createdSessionId });
+      } else if (signUp?.status === "missing_requirements") {
+        onError("We couldn't finish setting up your account. Try signing up with email.");
+      }
+      // Otherwise the guest closed the sheet, which isn't an error.
     } catch (e) {
       onError(authErrorMessage(e));
     } finally {

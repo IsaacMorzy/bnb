@@ -28,7 +28,7 @@ npx eas-cli@latest <cmd>    # EAS builds, submits, and updates (use instead of b
 
 Each tool has one job. Ask before moving a responsibility to a different tool.
 
-- **Auth:** Clerk is the source of truth. The app keeps its own custom auth screens in the `(auth)` route group (`sign-up`, `verify`, `sign-in`). Until Clerk is set up they call the mock in `src/lib/auth/mock.ts` (test values: code `424242`, `taken@example.com`, password `wrong-password`), and success lands on the `/home` stub. Clerk replaces the mock's functions, not the screens. Set Clerk up through the Clerk CLI and use the Clerk MCP for current Expo patterns.
+- **Auth:** Clerk is the source of truth, behind the app's own screens in the `(auth)` group (`sign-up`, `verify`, `sign-in`). Custom flows use `@clerk/expo`'s method-based `useSignIn`/`useSignUp` (methods return `{ error }`); never `@clerk/expo/legacy`. Email + password, with an email code for sign-up verification and for new-device trust on sign-in (`needs_client_trust`; `/verify?flow=sign-in`). Google and Apple use browser SSO via `useSSO` from `@clerk/expo`. Sessions persist through `tokenCache` (`expo-secure-store`). Error copy lives in `src/lib/auth/errors.ts`. Test with `name+clerk_test@example.com` and code `424242`. Use the Clerk MCP (`.mcp.json`) and Clerk CLI for current patterns.
 - **Content:** Sanity (properties, hosts, policies, house rules). Studio is a standalone app in `studio/`. Schema deploys and content changes go through the Sanity MCP, and generated property copy uses Agent Actions.
 - **Exact constraints** (price, guests, type, amenities, pets, place): GROQ filters, with values always passed as params.
 - **Soft intent** (quiet, cozy, secluded): Dataset Embeddings via `text::semanticSimilarity()` inside `score()`.
@@ -48,6 +48,7 @@ Each tool has one job. Ask before moving a responsibility to a different tool.
 - API routes verify the Clerk session before doing any work.
 - PostHog failures never block the app. Never send what guests type, tokens, or personal data in events.
 - Let Sanity generate document IDs. Model relationships as references.
+- Clerk's password minimum (Dashboard) and `validate.ts` are both 8 characters. Change them together.
 - Ask before adding a dependency or service, changing the Sanity schema once content exists, or deleting data. Prefer Expo modules over third-party libraries.
 - Whenever you need input from the user, ask through your tool's built-in question panel so they pick from options instead of typing. Give two to four clear options with the recommended one first. Fall back to plain text only if no such panel exists.
 
@@ -83,7 +84,7 @@ Designs are attached in the chat. Screens must match them exactly: layout, spaci
 - Light mode only (`userInterfaceStyle: "light"`). Add dark values as `prefers-color-scheme` overrides of the same tokens.
 - Labelled two-line fields use `TextField label`. Auth layout pieces (`AuthScreen`, `SocialButtons`, `CodeInput`) live in `src/components/auth/`.
 - Primitives live in `src/components/ui/` and take `className` (layout only) and `style` (merged last). Promote other views there only once two screens use them. Native controls (Switch) stay native and get colors through `styled` mappings.
-- `src/app/index.tsx` redirects to `/onboarding`; once Clerk lands it chooses onboarding or home from the session. The design-system preview lives at `/design-system` (`?y=<offset>` opens it scrolled). In Expo Go, deep link with `exp://127.0.0.1:8081/--/<route>`.
+- Route protection is `Stack.Protected` in the root layout: `(app)` (home) is signed-in only, `onboarding` and `(auth)` signed-out only. `index.tsx` is the anchor and redirects to `/home` or `/onboarding`. Screens never navigate after sign-in or sign-out; the guard does. The splash stays up until fonts and Clerk have loaded. Sign up and Sign in render `<View nativeID="clerk-captcha" />`. The design-system preview lives at `/design-system` (`?y=<offset>` opens it scrolled). In Expo Go, deep link with `exp://127.0.0.1:8081/--/<route>`.
 - Third-party views (`expo-image`, `GlassView`, `react-native-svg`) need `styled(X, { className: "style" })` before `className` works. SVG fills come from token classes through `nativeStyleMapping: { color: "fill" }`.
 
 ## Reporting
