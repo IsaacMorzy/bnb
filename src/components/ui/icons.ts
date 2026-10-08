@@ -4,6 +4,7 @@ import type { SymbolViewProps } from "expo-symbols";
 // SF Symbols on iOS, Material Symbols on Android and web.
 export const icons = {
   home: { ios: "house", android: "home", web: "home" },
+  homeFill: { ios: "house.fill", android: "home", web: "home" },
   search: { ios: "magnifyingglass", android: "search", web: "search" },
   heart: { ios: "heart", android: "favorite", web: "favorite" },
   calendar: { ios: "calendar", android: "calendar_today", web: "calendar_today" },
@@ -13,6 +14,7 @@ export const icons = {
   pin: { ios: "mappin.and.ellipse", android: "location_on", web: "location_on" },
   filters: { ios: "slider.horizontal.3", android: "tune", web: "tune" },
   arrowLeft: { ios: "arrow.left", android: "arrow_back", web: "arrow_back" },
+  arrowUpRight: { ios: "arrow.up.right", android: "north_east", web: "north_east" },
   arrowRight: { ios: "arrow.right", android: "arrow_forward", web: "arrow_forward" },
   chevronRight: { ios: "chevron.right", android: "chevron_right", web: "chevron_right" },
   close: { ios: "xmark", android: "close", web: "close" },
@@ -22,11 +24,12 @@ export const icons = {
   lock: { ios: "lock", android: "lock", web: "lock" },
   eye: { ios: "eye", android: "visibility", web: "visibility" },
   eyeOff: { ios: "eye.slash", android: "visibility_off", web: "visibility_off" },
+  sparkles: { ios: "sparkles", android: "auto_awesome", web: "auto_awesome" },
   star: { ios: "star.fill", android: "star", web: "star" },
-  cabin: { ios: "tree", android: "forest", web: "forest" },
+  cabin: { ios: "tree.fill", android: "forest", web: "forest" },
   beach: { ios: "water.waves", android: "waves", web: "waves" },
-  city: { ios: "building.2", android: "apartment", web: "apartment" },
-  villa: { ios: "beach.umbrella", android: "villa", web: "villa" }, // SF Symbols has no palm tree
+  city: { ios: "building.2.fill", android: "apartment", web: "apartment" },
+  villa: { ios: "beach.umbrella.fill", android: "villa", web: "villa" }, // neither set has a palm tree
   pets: { ios: "pawprint.fill", android: "pets", web: "pets" },
   hotTub: { ios: "bathtub", android: "hot_tub", web: "hot_tub" },
   minus: { ios: "minus", android: "remove", web: "remove" },

@@ -1,14 +1,15 @@
-import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
+import type { StyleProp, ViewStyle } from "react-native";
 
 import { cn } from "@/lib/cn";
 
 import { Icon } from "./icon";
 import type { IconName } from "./icons";
+import { PressableScale, type PressableScaleProps } from "./pressable-scale";
 import { Text } from "./text";
 
 const sizes = {
-  md: { container: "h-12 px-6", text: "label", icon: 20 },
-  sm: { container: "h-11 px-4", text: "footnote", icon: 18 },
+  md: { container: "h-12", text: "label", icon: 20 },
+  sm: { container: "h-11", text: "footnote", icon: 18 },
 } as const;
 
 const selectedTones = {
@@ -16,11 +17,18 @@ const selectedTones = {
   primary: "border-primary bg-primary",
 } as const;
 
-export type ChipProps = Omit<PressableProps, "children" | "style"> & {
+// Unselected look: outlined for filters, filled gray for Home's categories.
+const variants = {
+  outline: { idle: "border-border bg-surface", padding: { md: "px-6", sm: "px-4" } },
+  filled: { idle: "border-surface-muted bg-surface-muted", padding: { md: "px-4", sm: "px-3" } },
+} as const;
+
+export type ChipProps = Omit<PressableScaleProps, "children" | "style"> & {
   label: string;
   selected?: boolean;
   /** Fill when selected: lavender for filters, primary for categories. */
   tone?: keyof typeof selectedTones;
+  variant?: keyof typeof variants;
   size?: keyof typeof sizes;
   icon?: IconName;
   className?: string;
@@ -31,6 +39,7 @@ export function Chip({
   label,
   selected,
   tone = "lavender",
+  variant = "outline",
   size = "md",
   icon,
   className,
@@ -39,13 +48,15 @@ export function Chip({
 }: ChipProps) {
   const s = sizes[size];
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected }}
+      transitionProperty={["backgroundColor", "borderColor"]}
       className={cn(
-        "flex-row items-center gap-2 rounded-full border active:opacity-70",
+        "flex-row items-center gap-2 rounded-full border",
         s.container,
-        selected ? selectedTones[tone] : "border-border bg-surface",
+        variants[variant].padding[size],
+        selected ? selectedTones[tone] : variants[variant].idle,
         className,
       )}
       style={style}
@@ -53,6 +64,6 @@ export function Chip({
     >
       {icon && <Icon name={icon} size={s.icon} />}
       <Text variant={s.text}>{label}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }

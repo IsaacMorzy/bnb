@@ -44,6 +44,9 @@
   --text-display: 56px;
   --text-display--line-height: 1; /* 56px */
   --text-display--letter-spacing: -1px; /* * */
+  --text-jumbo: 52px; /* * home headline */
+  --text-jumbo--line-height: 0.9; /* 47px; tighter clips the cap tops on iOS */
+  --text-jumbo--letter-spacing: -2px; /* * */
   --text-hero: 44px; /* * onboarding headline */
   --text-hero--line-height: 0.9545; /* 42px */
   --text-hero--letter-spacing: -1.5px; /* * */

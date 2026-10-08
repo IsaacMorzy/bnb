@@ -8,6 +8,7 @@ import { tones, type Tone } from "./tones";
 // custom fonts get their weight from the family, not from fontWeight.
 export const textVariants = {
   display: "font-jakarta-bold text-display",
+  jumbo: "font-jakarta-bold text-jumbo",
   hero: "font-jakarta-bold text-hero",
   headline: "font-jakarta-bold text-headline",
   heading: "font-jakarta-bold text-heading",
