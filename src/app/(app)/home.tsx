@@ -1,7 +1,7 @@
 import { useUser } from "@clerk/expo";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition, ReduceMotion } from "react-native-reanimated";
 
@@ -9,8 +9,8 @@ import { Wordmark } from "@/components/brand/wordmark";
 import { CategoryChips, type Category } from "@/components/home/category-chips";
 import { PropertyCard } from "@/components/stays/property-card";
 import { SearchPrompt } from "@/components/stays/search-prompt";
-import { Avatar, Icon, PressableScale, Text } from "@/components/ui";
-import { properties } from "@/data/properties";
+import { Avatar, Button, Icon, PressableScale, Text } from "@/components/ui";
+import { useHomeStays } from "@/hooks/use-home-stays";
 import { motion } from "@/theme";
 
 // Changing the category fades cards in and out and eases the rest into place.
@@ -25,10 +25,7 @@ export default function Home() {
   const [category, setCategory] = useState<Category>("all");
   const [prompt, setPrompt] = useState("");
 
-  const stays = useMemo(
-    () => (category === "all" ? properties : properties.filter((p) => p.type === category)),
-    [category],
-  );
+  const { stays, error, retry } = useHomeStays(category);
 
   return (
     <ScrollView
@@ -75,16 +72,42 @@ export default function Home() {
         <CategoryChips value={category} onChange={setCategory} />
       </View>
 
-      {/* Cards are already there on first render; only category changes animate. */}
-      <LayoutAnimationConfig skipEntering>
-        <View className="mt-7 gap-5">
-          {stays.map((property) => (
-            <Animated.View key={property.id} entering={cardEnter} exiting={cardExit} layout={cardLayout}>
-              <PropertyCard property={property} />
-            </Animated.View>
+      {stays ? (
+        stays.length > 0 ? (
+          // The first list appears without entrances; only category changes animate.
+          <LayoutAnimationConfig skipEntering>
+            <View className="mt-7 gap-5">
+              {stays.map((property) => (
+                <Animated.View key={property.id} entering={cardEnter} exiting={cardExit} layout={cardLayout}>
+                  <PropertyCard property={property} />
+                </Animated.View>
+              ))}
+            </View>
+          </LayoutAnimationConfig>
+        ) : (
+          <View className="mt-10 items-center gap-2 px-4">
+            <Text variant="title" className="text-center">
+              No stays here yet
+            </Text>
+            <Text tone="muted" className="text-center">
+              Try another category, or describe your stay above.
+            </Text>
+          </View>
+        )
+      ) : error ? (
+        <View className="mt-10 items-center gap-4 px-4" accessibilityLiveRegion="polite">
+          <Text tone="muted" className="text-center">
+            We couldn’t load stays. Check your connection and try again.
+          </Text>
+          <Button title="Try again" variant="secondary" size="sm" onPress={retry} />
+        </View>
+      ) : (
+        <View className="mt-7 gap-5" accessibilityLabel="Loading stays" accessible>
+          {[0, 1, 2].map((i) => (
+            <View key={i} className="h-68 rounded-xl bg-surface-muted" />
           ))}
         </View>
-      </LayoutAnimationConfig>
+      )}
     </ScrollView>
   );
 }

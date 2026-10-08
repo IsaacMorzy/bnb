@@ -3,8 +3,8 @@ import { styled } from "nativewind";
 import { View, type StyleProp, type ViewStyle } from "react-native";
 
 import { Icon, Text } from "@/components/ui";
-import type { Property } from "@/data/properties";
 import { cn } from "@/lib/cn";
+import { placeLabel, type StayCardData } from "@/lib/stays";
 
 const Image = styled(RNImage, { className: "style" });
 
@@ -15,11 +15,11 @@ export function PropertyCard({
   className,
   style,
 }: {
-  property: Property;
+  property: StayCardData;
   className?: string;
   style?: StyleProp<ViewStyle>;
 }) {
-  const place = `${property.city}, ${property.region}`;
+  const place = placeLabel(property);
   return (
     <View
       accessible
