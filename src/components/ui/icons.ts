@@ -15,6 +15,7 @@ export const icons = {
   pin: { ios: "mappin.and.ellipse", android: "location_on", web: "location_on" },
   filters: { ios: "slider.horizontal.3", android: "tune", web: "tune" },
   arrowLeft: { ios: "arrow.left", android: "arrow_back", web: "arrow_back" },
+  arrowUp: { ios: "arrow.up", android: "arrow_upward", web: "arrow_upward" }, // send
   arrowUpRight: { ios: "arrow.up.right", android: "north_east", web: "north_east" },
   arrowRight: { ios: "arrow.right", android: "arrow_forward", web: "arrow_forward" },
   chevronLeft: { ios: "chevron.left", android: "chevron_left", web: "chevron_left" },
@@ -25,6 +26,10 @@ export const icons = {
   chat: { ios: "bubble.left", android: "chat_bubble_outline", web: "chat_bubble_outline" },
   policy: { ios: "doc.text", android: "description", web: "description" },
   rosette: { ios: "rosette", android: "workspace_premium", web: "workspace_premium" }, // Superhost
+  clock: { ios: "clock", android: "schedule", web: "schedule" }, // check-in and checkout
+  moon: { ios: "moon", android: "bedtime", web: "bedtime" }, // quiet hours
+  smoking: { ios: "nosign", android: "smoke_free", web: "smoke_free" }, // SF Symbols has no cigarette
+  party: { ios: "party.popper", android: "celebration", web: "celebration" },
   bookmark: { ios: "bookmark", android: "bookmark", web: "bookmark" },
   mail: { ios: "envelope", android: "mail", web: "mail" },
   lock: { ios: "lock", android: "lock", web: "lock" },

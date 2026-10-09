@@ -8,25 +8,34 @@ export function formatTime(value: string) {
   return `${hour}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 }
 
+export type HouseRuleKey = "checkIn" | "checkOut" | "quietHours" | "pets" | "smoking" | "parties" | "additional";
+
 // The stay's own rules, one line each, built only from its typed fields.
-// `additionalRules` are the host's words and show as written.
-export function houseRuleLines(rules: HouseRules): string[] {
-  const lines = [`Check-in after ${formatTime(rules.checkInTime)}`, `Checkout before ${formatTime(rules.checkOutTime)}`];
+// `additionalRules` are the host's words and show as written. Keyed so Ask can
+// answer with just the lines a topic needs.
+export function houseRuleParts(rules: HouseRules): { key: HouseRuleKey; text: string }[] {
+  const parts: { key: HouseRuleKey; text: string }[] = [
+    { key: "checkIn", text: `Check-in after ${formatTime(rules.checkInTime)}` },
+    { key: "checkOut", text: `Checkout before ${formatTime(rules.checkOutTime)}` },
+  ];
   if (rules.quietHoursFrom && rules.quietHoursTo) {
-    lines.push(`Quiet hours ${formatTime(rules.quietHoursFrom)} to ${formatTime(rules.quietHoursTo)}`);
+    parts.push({ key: "quietHours", text: `Quiet hours ${formatTime(rules.quietHoursFrom)} to ${formatTime(rules.quietHoursTo)}` });
   }
   if (rules.petsAllowed) {
-    const parts = ["Pets allowed"];
-    if (rules.maxPets) parts.push(`up to ${rules.maxPets}`);
-    if (rules.petFee) parts.push(`$${rules.petFee} pet fee per stay`);
-    lines.push(parts.join(", "));
+    const pets = ["Pets allowed"];
+    if (rules.maxPets) pets.push(`up to ${rules.maxPets}`);
+    if (rules.petFee) pets.push(`$${rules.petFee} pet fee per stay`);
+    parts.push({ key: "pets", text: pets.join(", ") });
   } else {
-    lines.push("No pets");
+    parts.push({ key: "pets", text: "No pets" });
   }
-  lines.push(rules.smokingAllowed ? "Smoking allowed" : "No smoking");
-  lines.push(rules.partiesAllowed ? "Parties allowed" : "No parties or events");
-  return [...lines, ...(rules.additionalRules ?? []).filter(Boolean)];
+  parts.push({ key: "smoking", text: rules.smokingAllowed ? "Smoking allowed" : "No smoking" });
+  parts.push({ key: "parties", text: rules.partiesAllowed ? "Parties allowed" : "No parties or events" });
+  for (const rule of rules.additionalRules ?? []) if (rule) parts.push({ key: "additional", text: rule });
+  return parts;
 }
+
+export const houseRuleLines = (rules: HouseRules) => houseRuleParts(rules).map((part) => part.text);
 
 // Until guests pick dates, the total is the shortest stay allowed plus cleaning.
 export function stayTotal(stay: Pick<StayDetails, "pricePerNight" | "minNights" | "cleaningFee">) {

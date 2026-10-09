@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { useRef } from "react";
-import { ScrollView, View } from "react-native";
+import { ScrollView, View, type LayoutChangeEvent } from "react-native";
 
 import { PolicyBody } from "@/components/stay/policy-body";
 import { Button, Text } from "@/components/ui";
@@ -9,13 +9,20 @@ import { houseRuleLines } from "@/lib/stay-details";
 
 // Everything that governs this stay, shown as written: its own rules, its
 // cancellation policy, then Roam's policies for every stay. Nothing here is
-// generated. Opened from "Ask about policies" and from the cancellation card
-// (`section=cancellation` scrolls to it).
+// generated. Opened from the cancellation card and from Ask's answer cards;
+// `section` (a policy kind, e.g. `cancellation` or `pets`) scrolls to it.
 export default function PoliciesSheet() {
   const { slug, section } = useLocalSearchParams<{ slug: string; section?: string }>();
   const { stay, error, retry } = useStay(slug);
   const scroll = useRef<ScrollView>(null);
   const scrolled = useRef(false);
+
+  // Scrolls once, to the section the sheet was opened for, once it's measured.
+  const onSectionLayout = (kind: string, e: LayoutChangeEvent) => {
+    if (section !== kind || scrolled.current) return;
+    scrolled.current = true;
+    scroll.current?.scrollTo({ y: e.nativeEvent.layout.y - 16, animated: false });
+  };
 
   if (!stay) {
     return (
@@ -46,14 +53,7 @@ export default function PoliciesSheet() {
       </View>
 
       {stay.cancellationPolicy && (
-        <View
-          className="mt-8 gap-3"
-          onLayout={(e) => {
-            if (section !== "cancellation" || scrolled.current) return;
-            scrolled.current = true;
-            scroll.current?.scrollTo({ y: e.nativeEvent.layout.y - 16, animated: false });
-          }}
-        >
+        <View className="mt-8 gap-3" onLayout={(e) => onSectionLayout("cancellation", e)}>
           <Text variant="title" accessibilityRole="header">
             {stay.cancellationPolicy.title}
           </Text>
@@ -62,7 +62,7 @@ export default function PoliciesSheet() {
       )}
 
       {stay.policies.map((policy) => (
-        <View key={policy.kind} className="mt-8 gap-3">
+        <View key={policy.kind} className="mt-8 gap-3" onLayout={(e) => onSectionLayout(policy.kind, e)}>
           <Text variant="title" accessibilityRole="header">
             {policy.title}
           </Text>

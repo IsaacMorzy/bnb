@@ -128,6 +128,7 @@ export default function DesignSystem() {
             <IconButton icon="search" accessibilityLabel="Search" />
             <IconButton icon="bookmark" accessibilityLabel="Bookmark" />
             <IconButton icon="arrowLeft" variant="outline" size="nav" accessibilityLabel="Back" />
+            <IconButton icon="arrowUp" variant="primary" size="send" accessibilityLabel="Send" />
           </View>
         </Section>
 

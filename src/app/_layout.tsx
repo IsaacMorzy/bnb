@@ -116,6 +116,7 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="(app)" />
         {/* Pushed over the tabs, so the tab bar hides on a stay. */}
         <Stack.Screen name="stay/[slug]/index" />
+        <Stack.Screen name="stay/[slug]/ask" />
         <Stack.Screen
           name="stay/[slug]/policies"
           options={{

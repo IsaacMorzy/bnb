@@ -11,12 +11,14 @@ const variants = {
   surface: "bg-surface", // on photos and colored backgrounds
   ghost: "", // inside fields and rows
   outline: "border border-border bg-surface", // back button on auth screens
+  primary: "bg-primary", // send in Ask's input
 } as const;
 
 const sizes = {
   md: { container: "size-14", icon: 24 },
   bar: { container: "size-13", icon: 22 }, // beside Search's bar
   nav: { container: "size-12", icon: 22 },
+  send: { container: "size-10", icon: 20 },
   sm: { container: "size-9", icon: 18 },
 } as const;
 

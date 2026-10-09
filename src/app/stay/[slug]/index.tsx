@@ -6,6 +6,7 @@ import { Alert, ScrollView, Share, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AmenityRow } from "@/components/stay/amenity-row";
+import { GoodToKnow } from "@/components/stay/good-to-know";
 import { HostRow } from "@/components/stay/host-row";
 import { PhotoButton } from "@/components/stay/photo-button";
 import { PhotoGallery } from "@/components/stay/photo-gallery";
@@ -54,7 +55,7 @@ export default function StayScreen() {
   }, [stayId]);
 
   const back = () => (router.canGoBack() ? router.back() : router.replace("/home"));
-  const openPolicies = (from: "ask" | "cancellation") => {
+  const openPolicies = (from: "cancellation" | "good_to_know") => {
     posthog?.capture("stay_policies_opened", { slug, from });
     router.push({
       pathname: "/stay/[slug]/policies",
@@ -132,13 +133,16 @@ export default function StayScreen() {
             </>
           )}
 
+          <GoodToKnow rules={stay.houseRules} onShowAll={() => openPolicies("good_to_know")} />
+          <View className="mt-5 h-px bg-border" />
+
           <View className="-mx-1 mt-1.5 gap-2.5">
             <PolicyCard
               icon="chat"
               tile
-              title="Ask about policies"
+              title="Ask about this stay"
               subtitle="Cancellation, house rules, pets, check-in and more."
-              onPress={() => openPolicies("ask")}
+              onPress={() => router.push({ pathname: "/stay/[slug]/ask", params: { slug } })}
             />
             {stay.cancellationPolicy && (
               <PolicyCard
