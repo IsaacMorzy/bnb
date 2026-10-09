@@ -114,6 +114,22 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
       </Stack.Protected>
       <Stack.Protected guard={!!isSignedIn}>
         <Stack.Screen name="(app)" />
+        {/* Pushed over the tabs, so the tab bar hides on a stay. */}
+        <Stack.Screen name="stay/[slug]/index" />
+        <Stack.Screen
+          name="stay/[slug]/policies"
+          options={{
+            presentation: "formSheet",
+            sheetGrabberVisible: true,
+            sheetAllowedDetents: [0.6, 1],
+            sheetExpandsWhenScrolledToEdge: true,
+          }}
+        />
+        <Stack.Screen
+          name="stay/[slug]/host"
+          // A fixed detent: "fitToContents" leaves the sheet's bottom edge uncovered on iOS 26.
+          options={{ presentation: "formSheet", sheetGrabberVisible: true, sheetAllowedDetents: [0.5, 1] }}
+        />
       </Stack.Protected>
     </Stack>
   );

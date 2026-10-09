@@ -19,6 +19,10 @@ import {
   type TextVariant,
 } from "@/components/ui";
 import { ResultCard, ResultTag } from "@/components/search/result-card";
+import { AmenityRow } from "@/components/stay/amenity-row";
+import { HostRow } from "@/components/stay/host-row";
+import { PolicyCard } from "@/components/stay/policy-card";
+import { RatingBox } from "@/components/stay/rating-box";
 import type { SearchStay } from "@/lib/stays";
 
 // Design system preview. Open with airbnbrecord://design-system.
@@ -229,6 +233,27 @@ export default function DesignSystem() {
             <ResultTag tag={{ key: "pets", label: "Pet Friendly", icon: "pets" }} />
           </View>
           <ResultCard stay={sampleStay} tags={[{ key: "pool", label: "Pool", icon: "pool" }, { key: "water", label: "Ocean View", icon: "water" }]} />
+        </Section>
+
+        <Section title="Stay">
+          <View className="flex-row items-start gap-4">
+            <Text variant="stayTitle" className="flex-1">
+              Modern Cabin with Hot Tub
+            </Text>
+            <RatingBox rating={4.9} reviewCount={214} />
+          </View>
+          <AmenityRow
+            tags={[
+              { key: "hotTub", label: "Hot Tub", icon: "hotTub" },
+              { key: "pets", label: "Pet Friendly", icon: "pets" },
+              { key: "fireplace", label: "Fireplace", icon: "fireplace" },
+              { key: "firePit", label: "Fire Pit", icon: "firePit" },
+            ]}
+          />
+          <PolicyCard icon="chat" tile title="Ask about policies" subtitle="Cancellation, house rules, pets, check-in and more." onPress={() => {}} />
+          <PolicyCard icon="policy" title="Moderate cancellation" subtitle="Full refund if you cancel at least 5 days before check-in." onPress={() => {}} />
+          <HostRow host={{ name: "Maya Alvarez", isSuperhost: true }} onPress={() => {}} />
+          <Button title="Book this stay" size="lg" />
         </Section>
       </ScrollView>
     </>

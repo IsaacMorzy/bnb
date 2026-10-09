@@ -19,6 +19,7 @@ const variants = {
 } as const;
 
 const sizes = {
+  lg: { container: "h-16 px-5", icon: 22 }, // "Book this stay"
   md: { container: "h-14 px-6", icon: 22 },
   sm: { container: "h-10 px-4", icon: 18 },
 } as const;

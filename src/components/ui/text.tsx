@@ -12,6 +12,7 @@ export const textVariants = {
   hero: "font-jakarta-bold text-hero",
   headline: "font-jakarta-bold text-headline",
   heading: "font-jakarta-bold text-heading",
+  stayTitle: "font-jakarta-bold text-stay-title",
   cardTitle: "font-jakarta-bold text-card-title",
   title: "font-jakarta-bold text-title",
   subtitle: "font-jakarta-semibold text-subtitle",

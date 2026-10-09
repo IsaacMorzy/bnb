@@ -87,7 +87,7 @@ export default function Home() {
             <View className="mt-7 gap-5">
               {stays.map((property) => (
                 <Animated.View key={property.id} entering={cardEnter} exiting={cardExit} layout={cardLayout}>
-                  <PropertyCard property={property} />
+                  <PropertyCard property={property} onPress={() => router.push(`/stay/${property.slug}`)} />
                 </Animated.View>
               ))}
             </View>

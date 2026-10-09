@@ -10,12 +10,19 @@ import { placeLabel, type SearchStay } from "@/lib/stays";
 
 const Image = styled(RNImage, { className: "style" });
 
-// A Search result: photo on the left, details on the right. Cards don't open a
-// stay yet; only the heart is interactive.
-export function ResultCard({ stay, tags }: { stay: SearchStay; tags: StayTag[] }) {
+// A Search result: photo on the left, details on the right. The card opens the
+// stay; the heart has its own press and doesn't.
+export function ResultCard({ stay, tags, onPress }: { stay: SearchStay; tags: StayTag[]; onPress?: () => void }) {
   const place = placeLabel(stay);
   return (
-    <View className="flex-row gap-3.5 rounded-xl bg-surface shadow-card">
+    // The heart is a sibling of the pressable area, so VoiceOver reaches both.
+    <View>
+      <PressableScale
+        accessibilityRole="button"
+        accessibilityLabel={`${stay.title}, ${place}, rated ${stay.rating.toFixed(1)} from ${stay.reviewCount} reviews, ${tags.map((t) => t.label).join(", ")}, $${stay.pricePerNight} a night`}
+        onPress={onPress}
+        className="flex-row gap-3.5 rounded-xl bg-surface shadow-card"
+      >
       <Image
         source={{ uri: stay.imageUrl }}
         accessibilityLabel={stay.imageAlt ?? undefined}
@@ -24,10 +31,7 @@ export function ResultCard({ stay, tags }: { stay: SearchStay; tags: StayTag[] }
         className="h-38 w-37 rounded-md bg-surface-muted"
       />
 
-      <View
-        accessible
-        accessibilityLabel={`${stay.title}, ${place}, rated ${stay.rating.toFixed(1)} from ${stay.reviewCount} reviews, ${tags.map((t) => t.label).join(", ")}, $${stay.pricePerNight} a night`}
-        className="flex-1 justify-between pr-1"
+      <View className="flex-1 justify-between pr-1"
       >
         <View>
           {/* Leaves room for the heart, which sits over the top-right corner. */}
@@ -65,6 +69,7 @@ export function ResultCard({ stay, tags }: { stay: SearchStay; tags: StayTag[] }
         </View>
       </View>
 
+      </PressableScale>
       <Heart id={stay.id} title={stay.title} />
     </View>
   );

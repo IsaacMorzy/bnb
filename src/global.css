@@ -12,6 +12,7 @@
   --color-primary-soft: #fef6dc; /* * */
   --color-lavender: #c9b4ff;
   --color-lavender-soft: #f3f0ff; /* * */
+  --color-lavender-muted: #e6dfff; /* * icon tile on lavender cards */
   --color-accent: #5b3df5; /* * */
   --color-ink: #0b0b1a;
   --color-ink-muted: #6b7280;
@@ -56,6 +57,9 @@
   --text-heading: 28px;
   --text-heading--line-height: 1.2143; /* 34px */
   --text-heading--letter-spacing: -0.5px; /* * */
+  --text-stay-title: 30px; /* * stay details title */
+  --text-stay-title--line-height: 1.0667; /* 32px */
+  --text-stay-title--letter-spacing: -1px; /* * */
   --text-card-title: 18px; /* * search result title */
   --text-card-title--line-height: 1.0667; /* 19.2px */
   --text-card-title--letter-spacing: -0.3px; /* * */

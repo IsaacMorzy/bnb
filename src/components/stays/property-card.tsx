@@ -2,27 +2,30 @@ import { Image as RNImage } from "expo-image";
 import { styled } from "nativewind";
 import { View, type StyleProp, type ViewStyle } from "react-native";
 
-import { Icon, Text } from "@/components/ui";
+import { Icon, PressableScale, Text } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { placeLabel, type StayCardData } from "@/lib/stays";
 
 const Image = styled(RNImage, { className: "style" });
 
-// The large photo card on Home and Search. Cards don't open a stay yet, so the
-// chevron is decorative and hidden from screen readers.
+// The large photo card on Home. The whole card opens the stay, so the chevron
+// is decorative and hidden from screen readers.
 export function PropertyCard({
   property,
+  onPress,
   className,
   style,
 }: {
   property: StayCardData;
+  onPress?: () => void;
   className?: string;
   style?: StyleProp<ViewStyle>;
 }) {
   const place = placeLabel(property);
   return (
-    <View
-      accessible
+    <PressableScale
+      accessibilityRole="button"
+      onPress={onPress}
       accessibilityLabel={`${property.title}, ${place}, rated ${property.rating.toFixed(1)}, $${property.pricePerNight} a night`}
       className={cn("h-68 overflow-hidden rounded-xl bg-surface-muted", className)}
       style={style}
@@ -60,6 +63,6 @@ export function PropertyCard({
       >
         <Icon name="chevronRight" size={24} />
       </View>
-    </View>
+    </PressableScale>
   );
 }

@@ -22,6 +22,9 @@ export const icons = {
   chevronRight: { ios: "chevron.right", android: "chevron_right", web: "chevron_right" },
   close: { ios: "xmark", android: "close", web: "close" },
   share: { ios: "square.and.arrow.up", android: "ios_share", web: "ios_share" },
+  chat: { ios: "bubble.left", android: "chat_bubble_outline", web: "chat_bubble_outline" },
+  policy: { ios: "doc.text", android: "description", web: "description" },
+  rosette: { ios: "rosette", android: "workspace_premium", web: "workspace_premium" }, // Superhost
   bookmark: { ios: "bookmark", android: "bookmark", web: "bookmark" },
   mail: { ios: "envelope", android: "mail", web: "mail" },
   lock: { ios: "lock", android: "lock", web: "lock" },

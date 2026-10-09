@@ -154,6 +154,7 @@ export default function Search() {
 // Results the guest asked for and is waiting on rise in, 40 ms apart. Rows past
 // the sixth come in together so a long list never feels slow.
 function StaggeredResult({ stay, tags, index }: { stay: SearchStay; tags: StayTag[]; index: number }) {
+  const router = useRouter();
   const entering = useMemo(
     () =>
       FadeInDown.duration(motion.base)
@@ -164,7 +165,7 @@ function StaggeredResult({ stay, tags, index }: { stay: SearchStay; tags: StayTa
   );
   return (
     <Animated.View entering={entering}>
-      <ResultCard stay={stay} tags={tags} />
+      <ResultCard stay={stay} tags={tags} onPress={() => router.push(`/stay/${stay.slug}`)} />
     </Animated.View>
   );
 }

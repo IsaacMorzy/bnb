@@ -22,3 +22,28 @@ export const HOME_STAYS_QUERY = /* groq */ `
 export const PLACES_QUERY = /* groq */ `
   array::compact(array::unique(*[_type == "property" && defined(slug.current)]{ "p": [city, region, country, neighborhood] }.p[]))
 `;
+
+// One stay for its details screen, with its host, its cancellation policy and
+// Roam's other policies, so the Policies sheet needs no second request.
+export const STAY_QUERY = /* groq */ `
+  *[_type == "property" && slug.current == $slug][0]{
+    "id": _id,
+    "slug": slug.current,
+    title,
+    type,
+    city,
+    region,
+    country,
+    rating,
+    reviewCount,
+    pricePerNight,
+    cleaningFee,
+    minNights,
+    amenities,
+    "photos": photos[]{ "url": asset->url, alt },
+    houseRules,
+    "host": host->{ name, "photoUrl": photo.asset->url, bio, isSuperhost, hostingSince, responseTime, languages },
+    "cancellationPolicy": cancellationPolicy->{ kind, title, summary, body },
+    "policies": *[_type == "policy" && kind != "cancellation"]{ kind, title, summary, body }
+  }
+`;

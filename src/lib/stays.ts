@@ -47,3 +47,64 @@ export type SearchStay = StayCardData & {
   amenities: Amenity[] | null;
   petsAllowed: boolean;
 };
+
+// ---- Stay details (STAY_QUERY in src/lib/sanity/queries.ts projects exactly this)
+
+export type HouseRules = {
+  checkInTime: string;
+  checkOutTime: string;
+  quietHoursFrom?: string | null;
+  quietHoursTo?: string | null;
+  petsAllowed: boolean;
+  maxPets?: number | null;
+  petFee?: number | null;
+  smokingAllowed?: boolean | null;
+  partiesAllowed?: boolean | null;
+  additionalRules?: string[] | null;
+};
+
+// The Portable Text the policy schema allows: paragraphs, h3, bullets, strong.
+export type PolicySpan = { _key: string; text: string; marks?: string[] };
+export type PolicyBlock = {
+  _key: string;
+  _type: string;
+  style?: string;
+  listItem?: string;
+  children?: PolicySpan[];
+};
+
+export type Policy = { kind: string; title: string; summary?: string | null; body: PolicyBlock[] };
+
+export type ResponseTime = "withinHour" | "withinFewHours" | "withinDay";
+
+export type StayHost = {
+  name: string;
+  photoUrl?: string | null;
+  bio?: string | null;
+  isSuperhost?: boolean | null;
+  hostingSince?: string | null;
+  responseTime?: ResponseTime | null;
+  languages?: string[] | null;
+};
+
+export type StayDetails = {
+  id: string;
+  slug: string;
+  title: string;
+  type: PropertyType;
+  city: string;
+  region?: string | null;
+  country?: string | null;
+  rating: number;
+  reviewCount: number;
+  pricePerNight: number;
+  cleaningFee?: number | null;
+  minNights?: number | null;
+  amenities: Amenity[] | null;
+  photos: { url: string; alt?: string | null }[];
+  houseRules: HouseRules;
+  host: StayHost | null;
+  cancellationPolicy: Policy | null;
+  /** Roam's policies that apply to every stay. */
+  policies: Policy[];
+};
