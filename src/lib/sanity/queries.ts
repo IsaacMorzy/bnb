@@ -16,3 +16,9 @@ export const HOME_STAYS_QUERY = /* groq */ `
       "imageAlt": photos[0].alt
     }
 `;
+
+// Every place name a stay has, so the search parser can tell "in Paris" (a
+// place filter) from "in the woods" (a soft word).
+export const PLACES_QUERY = /* groq */ `
+  array::compact(array::unique(*[_type == "property" && defined(slug.current)]{ "p": [city, region, country, neighborhood] }.p[]))
+`;

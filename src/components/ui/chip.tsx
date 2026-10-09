@@ -10,6 +10,7 @@ import { Text } from "./text";
 const sizes = {
   md: { container: "h-12", text: "label", icon: 20 },
   sm: { container: "h-11", text: "footnote", icon: 18 },
+  xs: { container: "h-9", text: "label", icon: 16 }, // Search's constraint chips
 } as const;
 
 const selectedTones = {
@@ -19,8 +20,8 @@ const selectedTones = {
 
 // Unselected look: outlined for filters, filled gray for Home's categories.
 const variants = {
-  outline: { idle: "border-border bg-surface", padding: { md: "px-6", sm: "px-4" } },
-  filled: { idle: "border-surface-muted bg-surface-muted", padding: { md: "px-4", sm: "px-3" } },
+  outline: { idle: "border-border bg-surface", padding: { md: "px-6", sm: "px-4", xs: "px-4" } },
+  filled: { idle: "border-surface-muted bg-surface-muted", padding: { md: "px-4", sm: "px-3", xs: "px-4" } },
 } as const;
 
 export type ChipProps = Omit<PressableScaleProps, "children" | "style"> & {

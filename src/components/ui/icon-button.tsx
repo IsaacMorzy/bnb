@@ -15,6 +15,7 @@ const variants = {
 
 const sizes = {
   md: { container: "size-14", icon: 24 },
+  bar: { container: "size-13", icon: 22 }, // beside Search's bar
   nav: { container: "size-12", icon: 22 },
   sm: { container: "size-9", icon: 18 },
 } as const;

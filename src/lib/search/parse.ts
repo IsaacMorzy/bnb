@@ -1,8 +1,7 @@
-import type { Amenity, PropertyType } from "@/data/properties";
+import type { Amenity, PropertyType } from "@/lib/stays";
 
-// Turns one sentence into exact constraints (which filter) and soft terms
-// (which rank). A local stand-in for GROQ params + embeddings: values are only
-// ever parsed in code.
+// Turns one sentence into exact constraints (which become GROQ filters) and
+// soft terms (which only rank). Values are only ever parsed in code.
 
 export type ParsedQuery = {
   maxPrice?: number;
@@ -10,6 +9,8 @@ export type ParsedQuery = {
   type?: PropertyType;
   amenities: Amenity[];
   pets?: boolean;
+  /** Where the stay is. `values` are lowercase names any place field may equal. */
+  place?: { label: string; values: string[] };
   /** Leftover words that rank but don't filter, e.g. "quiet". */
   terms: string[];
 };
@@ -35,7 +36,10 @@ const amenityWords: [RegExp, Amenity][] = [
   [/\b(air ?con(ditioning)?|a\/c|ac)\b/, "ac"],
   [/\b(ocean|sea) ?views?\b/, "oceanView"],
   [/\b(lake ?views?|lakefront|lakeside|on the lake)\b/, "lakeView"],
+  [/\bmountain ?views?\b/, "mountainView"],
   [/\bbeach access\b/, "beachAccess"],
+  [/\b(bbq|barbecue|grill)\b/, "bbq"],
+  [/\b(ev|electric car|tesla) ?charg(er|ing)\b/, "evCharger"],
 ];
 
 const petWords = /\b(pet[- ]?friendly|pets?( (allowed|ok|welcome))?|dogs?|cats?|puppy)\b/;
@@ -50,6 +54,28 @@ const guestPatterns = [
   /\b(\d+)\s*(?:guests?|people|persons|adults|of us)\b/,
   /\b(?:for|sleeps|sleeping|fits)\s+(\d+)\b/,
 ];
+
+// US stays store the state code as `region` ("CA"); guests type either form.
+const usStates: Record<string, string> = {
+  alabama: "al", alaska: "ak", arizona: "az", arkansas: "ar", california: "ca", colorado: "co",
+  connecticut: "ct", delaware: "de", florida: "fl", georgia: "ga", hawaii: "hi", idaho: "id",
+  illinois: "il", indiana: "in", iowa: "ia", kansas: "ks", kentucky: "ky", louisiana: "la",
+  maine: "me", maryland: "md", massachusetts: "ma", michigan: "mi", minnesota: "mn",
+  mississippi: "ms", missouri: "mo", montana: "mt", nebraska: "ne", nevada: "nv",
+  "new hampshire": "nh", "new jersey": "nj", "new mexico": "nm", "new york": "ny",
+  "north carolina": "nc", "north dakota": "nd", ohio: "oh", oklahoma: "ok", oregon: "or",
+  pennsylvania: "pa", "rhode island": "ri", "south carolina": "sc", "south dakota": "sd",
+  tennessee: "tn", texas: "tx", utah: "ut", vermont: "vt", virginia: "va", washington: "wa",
+  "west virginia": "wv", wisconsin: "wi", wyoming: "wy",
+};
+const stateNames = Object.fromEntries(Object.entries(usStates).map(([name, code]) => [code, name]));
+const placeAliases: Record<string, string> = {
+  usa: "united states",
+  us: "united states",
+  america: "united states",
+  "the us": "united states",
+  "the usa": "united states",
+};
 
 // Map common synonyms onto the vibe words stays are tagged with.
 const synonyms: Record<string, string> = {
@@ -71,7 +97,6 @@ const synonyms: Record<string, string> = {
   scenic: "views",
   kids: "family",
   families: "family",
-  walkable: "walkable",
   central: "walkable",
   busy: "lively",
   nightlife: "lively",
@@ -88,8 +113,44 @@ function take(text: string, pattern: RegExp): [RegExpMatchArray | null, string] 
 }
 
 const toNumber = (raw: string) => Number(raw.replace(/,/g, ""));
+const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const titleCase = (s: string) => s.replace(/\b[a-z]/g, (c) => c.toUpperCase());
 
-export function parseQuery(input: string): ParsedQuery {
+// The longest known place name in the text wins ("mexico city" over "mexico").
+// Two-letter codes only count after "in"/"near", so "or" and "hi" stay words.
+function takePlace(text: string, knownPlaces: string[]): [ParsedQuery["place"], string] {
+  const names = [...new Set([...knownPlaces, ...Object.keys(usStates), ...Object.keys(placeAliases)])]
+    .filter((name) => name.length > 2)
+    .sort((a, b) => b.length - a.length);
+  const codes = Object.keys(stateNames);
+
+  let found: string | undefined;
+  let rest = text;
+  for (const name of names) {
+    const [match, after] = take(rest, new RegExp(`\\b(?:(?:in|near)\\s+)?${escape(name)}\\b`));
+    if (match) {
+      found = name;
+      rest = after;
+      break;
+    }
+  }
+  if (!found) {
+    const [match, after] = take(rest, new RegExp(`\\b(?:in|near)\\s+(${codes.join("|")})\\b`));
+    if (match) {
+      found = match[1];
+      rest = after;
+    }
+  }
+  if (!found) return [undefined, text];
+
+  const name = placeAliases[found] ?? found;
+  const values = [name, usStates[name], stateNames[name]].filter((v): v is string => !!v);
+  const label = stateNames[name] ? name.toUpperCase() : titleCase(name);
+  return [{ label, values }, rest];
+}
+
+/** `knownPlaces`: lowercase city, region, country and neighborhood names of every stay. */
+export function parseQuery(input: string, knownPlaces: string[] = []): ParsedQuery {
   let text = ` ${input.toLowerCase().replace(/[’']/g, "")} `
     .replace(/\b(a|per|\/)\s*night\b|\/night|\bnightly\b/g, " ");
   const query: ParsedQuery = { amenities: [], terms: [] };
@@ -112,7 +173,15 @@ export function parseQuery(input: string): ParsedQuery {
     }
   }
 
-  // Amenities first, so "beach access" isn't read as the beach type.
+  // Places before types and amenities, so "Mexico City" and "Cannon Beach"
+  // aren't read as the city or beach type.
+  const [place, afterPlace] = takePlace(text, knownPlaces);
+  if (place) {
+    query.place = place;
+    text = afterPlace;
+  }
+
+  // Amenities before types, so "beach access" isn't read as the beach type.
   for (const [pattern, amenity] of amenityWords) {
     const [match, rest] = take(text, pattern);
     if (match) {
@@ -147,24 +216,27 @@ export function parseQuery(input: string): ParsedQuery {
   return query;
 }
 
-const amenityLabels: Record<Amenity, string> = {
-  hotTub: "Hot tub",
+export const amenityLabels: Record<Amenity, string> = {
+  hotTub: "Hot Tub",
   pool: "Pool",
   fireplace: "Fireplace",
-  firePit: "Fire pit",
+  firePit: "Fire Pit",
   sauna: "Sauna",
   wifi: "Wi-Fi",
   kitchen: "Kitchen",
   workspace: "Workspace",
   parking: "Parking",
   washer: "Washer",
-  ac: "Air conditioning",
-  oceanView: "Ocean view",
-  lakeView: "Lake view",
-  beachAccess: "Beach access",
+  ac: "A/C",
+  oceanView: "Ocean View",
+  lakeView: "Lake View",
+  mountainView: "Mountain View",
+  beachAccess: "Beach Access",
+  bbq: "BBQ Grill",
+  evCharger: "EV Charger",
 };
 
-const typeLabels: Record<PropertyType, string> = {
+export const typeLabels: Record<PropertyType, string> = {
   cabin: "Cabins",
   beach: "Beach",
   city: "City",
@@ -175,9 +247,10 @@ const typeLabels: Record<PropertyType, string> = {
 export function describeQuery(query: ParsedQuery): string[] {
   return [
     query.type && typeLabels[query.type],
+    query.place?.label,
     query.maxPrice !== undefined && `Under $${query.maxPrice}`,
     query.guests !== undefined && `${query.guests}+ guests`,
-    query.pets && "Pets allowed",
+    query.pets && "Pet Friendly",
     ...query.amenities.map((a) => amenityLabels[a]),
   ].filter((label): label is string => !!label);
 }

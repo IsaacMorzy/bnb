@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import { View } from "react-native";
 
 import { Chip, type IconName } from "@/components/ui";
-import type { PropertyType } from "@/data/properties";
+import type { PropertyType } from "@/lib/stays";
 import { posthog } from "@/lib/posthog";
 
 export type Category = PropertyType | "all";

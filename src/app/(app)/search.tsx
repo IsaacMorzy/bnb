@@ -4,13 +4,16 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeInDown, ReduceMotion } from "react-native-reanimated";
 
-import { PropertyCard } from "@/components/stays/property-card";
-import { SearchPrompt } from "@/components/stays/search-prompt";
-import { Badge, Button, Text } from "@/components/ui";
-import type { Property } from "@/data/properties";
-import { describeQuery } from "@/lib/search/parse";
+import { ResultCard, ResultCardSkeleton } from "@/components/search/result-card";
+import { SearchBar } from "@/components/search/search-bar";
+import { SearchChips } from "@/components/search/search-chips";
+import { SortMenu } from "@/components/search/sort-menu";
+import { Badge, Button, IconButton, Text } from "@/components/ui";
+import { useKnownPlaces, useSearchStays } from "@/hooks/use-search-stays";
 import { posthog } from "@/lib/posthog";
-import { searchProperties } from "@/lib/search/search";
+import { describeQuery, parseQuery, type ParsedQuery } from "@/lib/search/parse";
+import { chipsFor, hasChip, stayTags, toggleChip, type SortOption, type StayTag } from "@/lib/search/query";
+import type { SearchStay } from "@/lib/stays";
 import { motion } from "@/theme";
 
 const MAX_STAGGERED = 6;
@@ -20,74 +23,128 @@ export default function Search() {
   const { q = "" } = useLocalSearchParams<{ q?: string }>();
   const [text, setText] = useState(q);
   const [shownQ, setShownQ] = useState(q);
+  // Chip toggles refine the submitted sentence until the next one is sent.
+  const [edited, setEdited] = useState<ParsedQuery | null>(null);
+  const [sort, setSort] = useState<SortOption>("best");
   const input = useRef<TextInput>(null);
 
-  // A new query from Home replaces whatever was typed here.
+  // A new query from Home replaces whatever was typed and toggled here.
   if (q !== shownQ) {
     setShownQ(q);
     setText(q);
+    setEdited(null);
   }
 
-  // Opened without a query (search button or tab), the prompt is ready to type.
+  // Opened without a query (search button or tab), the bar is ready to type.
   useFocusEffect(
     useCallback(() => {
       if (!q) input.current?.focus();
     }, [q]),
   );
 
-  const { query, results } = useMemo(() => searchProperties(q), [q]);
-  const constraints = describeQuery(query);
+  const places = useKnownPlaces();
+  const submitted = useMemo(() => (places ? parseQuery(q, places) : undefined), [q, places]);
+  const query = edited ?? submitted;
+  const chips = useMemo(() => (submitted ? chipsFor(submitted) : []), [submitted]);
+  const { result, error, retry } = useSearchStays(query, sort);
+
+  const clear = () => {
+    setEdited(null);
+    setText("");
+    router.setParams({ q: "" });
+  };
 
   return (
     <ScrollView
       className="flex-1 bg-surface"
-      contentContainerClassName="px-5 pt-2 pb-8"
+      contentContainerClassName="px-4 pt-2 pb-8"
       contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
     >
       <StatusBar style="dark" />
-      <SearchPrompt
-        ref={input}
-        value={text}
-        onChangeText={setText}
-        onSubmit={(next) => {
-          posthog?.capture("search_submitted", { source: "search" });
-          router.setParams({ q: next });
-        }}
-      />
+      <View className="flex-row items-center gap-3">
+        <IconButton icon="chevronLeft" size="bar" accessibilityLabel="Back to Home" onPress={() => router.navigate("/home")} />
+        <SearchBar
+          ref={input}
+          value={text}
+          onChangeText={setText}
+          onSubmit={(next) => {
+            posthog?.capture("search_submitted", { source: "search" });
+            setEdited(null);
+            router.setParams({ q: next });
+          }}
+          className="flex-1"
+        />
+      </View>
 
-      {results.length > 0 ? (
-        <>
-          <Text variant="caption" tone="muted" className="mt-4" accessibilityLiveRegion="polite">
-            {results.length === 1 ? "1 stay" : `${results.length} stays`}
-            {q ? " ranked for you" : " by rating"}
-          </Text>
-          {/* Keyed by query, so every new search replays the entrance. */}
-          <View key={q} className="mt-4 gap-5">
-            {results.map((property, index) => (
-              <ResultCard key={property.id} property={property} index={index} />
-            ))}
-          </View>
-        </>
-      ) : (
-        <View className="mt-10 items-center gap-4 px-4">
-          <Text variant="title" className="text-center">
-            No stays match that yet
-          </Text>
-          {constraints.length > 0 && (
-            <>
-              <Text tone="muted" className="text-center">
-                Every stay has to meet these:
+      {query && chips.length > 0 && (
+        <View className="mt-3">
+          <SearchChips
+            chips={chips}
+            isSelected={(chip) => hasChip(query, chip)}
+            onToggle={(chip, on) => {
+              posthog?.capture("search_chip_toggled", { chip: chip.kind, on });
+              setEdited(toggleChip(query, chip, on));
+            }}
+          />
+        </View>
+      )}
+
+      {result && query ? (
+        result.total > 0 ? (
+          <>
+            <View className="mt-5 flex-row items-center justify-between">
+              <Text variant="lead" accessibilityLiveRegion="polite">
+                {result.total === 1 ? "1 stay" : `${result.total} stays`}
               </Text>
-              <View className="flex-row flex-wrap justify-center gap-2">
-                {constraints.map((label) => (
-                  <Badge key={label} label={label} tone="info" />
-                ))}
-              </View>
-            </>
-          )}
-          <Button title="Clear search" variant="secondary" size="sm" onPress={() => router.setParams({ q: "" })} />
+              <SortMenu
+                value={sort}
+                onChange={(next) => {
+                  posthog?.capture("search_sorted", { sort: next });
+                  setSort(next);
+                }}
+              />
+            </View>
+            {/* Keyed by request, so every new search, toggle or sort replays the entrance. */}
+            <View key={result.key} className="mt-4 gap-4">
+              {result.stays.map((stay, index) => (
+                <StaggeredResult key={stay.id} stay={stay} tags={stayTags(stay, query)} index={index} />
+              ))}
+            </View>
+          </>
+        ) : (
+          <View className="mt-10 items-center gap-4 px-4" accessibilityLiveRegion="polite">
+            <Text variant="title" className="text-center">
+              No stays match that yet
+            </Text>
+            {describeQuery(query).length > 0 && (
+              <>
+                <Text tone="muted" className="text-center">
+                  Every stay has to meet these:
+                </Text>
+                <View className="flex-row flex-wrap justify-center gap-2">
+                  {describeQuery(query).map((label) => (
+                    <Badge key={label} label={label} tone="info" />
+                  ))}
+                </View>
+              </>
+            )}
+            <Button title="Clear search" variant="secondary" size="sm" onPress={clear} />
+          </View>
+        )
+      ) : error ? (
+        <View className="mt-10 items-center gap-4 px-4" accessibilityLiveRegion="polite">
+          <Text tone="muted" className="text-center">
+            We couldn’t load stays. Check your connection and try again.
+          </Text>
+          <Button title="Try again" variant="secondary" size="sm" onPress={retry} />
+        </View>
+      ) : (
+        <View className="mt-14 gap-4" accessibilityLabel="Loading stays" accessible>
+          {[0, 1, 2].map((i) => (
+            <ResultCardSkeleton key={i} />
+          ))}
         </View>
       )}
     </ScrollView>
@@ -96,7 +153,7 @@ export default function Search() {
 
 // Results the guest asked for and is waiting on rise in, 40 ms apart. Rows past
 // the sixth come in together so a long list never feels slow.
-function ResultCard({ property, index }: { property: Property; index: number }) {
+function StaggeredResult({ stay, tags, index }: { stay: SearchStay; tags: StayTag[]; index: number }) {
   const entering = useMemo(
     () =>
       FadeInDown.duration(motion.base)
@@ -107,7 +164,7 @@ function ResultCard({ property, index }: { property: Property; index: number }) 
   );
   return (
     <Animated.View entering={entering}>
-      <PropertyCard property={property} />
+      <ResultCard stay={stay} tags={tags} />
     </Animated.View>
   );
 }

@@ -1,7 +1,26 @@
-import type { PropertyType } from "@/data/properties";
+// Mirrors the Sanity `property` schema (studio/schemaTypes/property.ts).
+export type PropertyType = "cabin" | "beach" | "city" | "villa";
 
-// What a stay card needs. Both local stays (Search) and live Sanity stays
-// (Home) satisfy it.
+export type Amenity =
+  | "hotTub"
+  | "pool"
+  | "fireplace"
+  | "firePit"
+  | "sauna"
+  | "wifi"
+  | "kitchen"
+  | "workspace"
+  | "parking"
+  | "washer"
+  | "ac"
+  | "oceanView"
+  | "lakeView"
+  | "beachAccess"
+  | "mountainView"
+  | "bbq"
+  | "evCharger";
+
+// What Home's photo card needs.
 export type StayCardData = {
   id: string;
   title: string;
@@ -19,3 +38,12 @@ export type HomeStay = StayCardData & { slug: string; type: PropertyType };
 // "Lake Arrowhead, CA" when a region is set, otherwise "Lisbon, Portugal".
 export const placeLabel = (stay: Pick<StayCardData, "city" | "region" | "country">) =>
   [stay.city, stay.region || stay.country].filter(Boolean).join(", ");
+
+// A Search result row (src/lib/search/query.ts projects exactly this).
+export type SearchStay = StayCardData & {
+  slug: string;
+  type: PropertyType;
+  reviewCount: number;
+  amenities: Amenity[] | null;
+  petsAllowed: boolean;
+};

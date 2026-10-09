@@ -18,6 +18,8 @@ import {
   type IconName,
   type TextVariant,
 } from "@/components/ui";
+import { ResultCard, ResultTag } from "@/components/search/result-card";
+import type { SearchStay } from "@/lib/stays";
 
 // Design system preview. Open with airbnbrecord://design-system.
 
@@ -216,10 +218,37 @@ export default function DesignSystem() {
             <Badge label="Superhost" tone="info" />
           </View>
         </Section>
+
+        <Section title="Search">
+          <View className="flex-row flex-wrap gap-2.5">
+            <Chip label="Cabins" size="xs" variant="filled" selected />
+            <Chip label="Under $300" size="xs" variant="filled" />
+          </View>
+          <View className="flex-row gap-1.5">
+            <ResultTag tag={{ key: "hotTub", label: "Hot Tub", icon: "hotTub" }} />
+            <ResultTag tag={{ key: "pets", label: "Pet Friendly", icon: "pets" }} />
+          </View>
+          <ResultCard stay={sampleStay} tags={[{ key: "pool", label: "Pool", icon: "pool" }, { key: "water", label: "Ocean View", icon: "water" }]} />
+        </Section>
       </ScrollView>
     </>
   );
 }
+
+const sampleStay: SearchStay = {
+  id: "sample",
+  slug: "sample",
+  type: "villa",
+  title: "Oceanview Villa with Private Pool",
+  city: "Malibu",
+  region: "CA",
+  rating: 4.8,
+  reviewCount: 128,
+  pricePerNight: 412,
+  amenities: ["pool", "oceanView"],
+  petsAllowed: false,
+  imageUrl: "",
+};
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
