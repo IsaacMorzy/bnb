@@ -9,6 +9,7 @@ import { SearchPrompt } from "@/components/stays/search-prompt";
 import { Badge, Button, Text } from "@/components/ui";
 import type { Property } from "@/data/properties";
 import { describeQuery } from "@/lib/search/parse";
+import { posthog } from "@/lib/posthog";
 import { searchProperties } from "@/lib/search/search";
 import { motion } from "@/theme";
 
@@ -46,7 +47,15 @@ export default function Search() {
       keyboardDismissMode="on-drag"
     >
       <StatusBar style="dark" />
-      <SearchPrompt ref={input} value={text} onChangeText={setText} onSubmit={(next) => router.setParams({ q: next })} />
+      <SearchPrompt
+        ref={input}
+        value={text}
+        onChangeText={setText}
+        onSubmit={(next) => {
+          posthog?.capture("search_submitted", { source: "search" });
+          router.setParams({ q: next });
+        }}
+      />
 
       {results.length > 0 ? (
         <>

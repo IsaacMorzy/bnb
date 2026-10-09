@@ -3,6 +3,7 @@ import { View } from "react-native";
 
 import { Chip, type IconName } from "@/components/ui";
 import type { PropertyType } from "@/data/properties";
+import { posthog } from "@/lib/posthog";
 
 export type Category = PropertyType | "all";
 
@@ -29,6 +30,7 @@ export function CategoryChips({ value, onChange }: { value: Category; onChange: 
           onPress={() => {
             if (c.value === value) return;
             Haptics.selectionAsync().catch(() => {});
+            posthog?.capture("category_selected", { category: c.value });
             onChange(c.value);
           }}
         />

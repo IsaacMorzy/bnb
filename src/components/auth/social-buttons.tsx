@@ -6,6 +6,7 @@ import { ActivityIndicator, Platform, Pressable, View } from "react-native";
 import { GoogleMark } from "@/components/onboarding/google-mark";
 import { Icon, Text } from "@/components/ui";
 import { authErrorMessage } from "@/lib/auth/errors";
+import { posthog } from "@/lib/posthog";
 
 type Provider = "oauth_google" | "oauth_apple";
 
@@ -41,8 +42,9 @@ export function SocialButtons({
       // Opens the provider in a browser sheet. The root layout's guard moves the
       // guest home once the session is active.
       const { createdSessionId, setActive, signUp } = await startSSOFlow({ strategy: provider });
-      if (createdSessionId) {
-        await setActive?.({ session: createdSessionId });
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
+        posthog?.capture("social_auth_completed", { auth_provider: provider.replace("oauth_", "") });
       } else if (signUp?.status === "missing_requirements") {
         onError("We couldn't finish setting up your account. Try signing up with email.");
       }

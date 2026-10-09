@@ -12,6 +12,7 @@ import { Button, TextField } from "@/components/ui";
 import { authErrorMessage } from "@/lib/auth/errors";
 import { finalizeOptions } from "@/lib/auth/session";
 import { firstError, validateSignIn, type FieldErrors } from "@/lib/auth/validate";
+import { logPostHogInfo, posthog } from "@/lib/posthog";
 
 type Field = "email" | "password";
 
@@ -47,7 +48,12 @@ export default function SignIn() {
 
       if (signIn.status === "complete") {
         const { error: unfinished } = await signIn.finalize(finalizeOptions);
-        if (unfinished) setAuthError(authErrorMessage(unfinished));
+        if (unfinished) return setAuthError(authErrorMessage(unfinished));
+        posthog?.capture("sign_in_completed", { method: "password" });
+        logPostHogInfo("authentication session completed", {
+          event: "authentication_session_completed",
+          method: "password",
+        });
         return;
       }
 
@@ -56,6 +62,10 @@ export default function SignIn() {
       if (signIn.status === "needs_client_trust" && canTrust) {
         const { error: unsent } = await signIn.mfa.sendEmailCode();
         if (unsent) return setAuthError(authErrorMessage(unsent));
+        logPostHogInfo("authentication verification requested", {
+          event: "authentication_verification_requested",
+          factor: "email_code",
+        });
         router.push({ pathname: "/verify", params: { email, flow: "sign-in" } });
         return;
       }

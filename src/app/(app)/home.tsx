@@ -11,6 +11,7 @@ import { PropertyCard } from "@/components/stays/property-card";
 import { SearchPrompt } from "@/components/stays/search-prompt";
 import { Avatar, Button, Icon, PressableScale, Text } from "@/components/ui";
 import { useHomeStays } from "@/hooks/use-home-stays";
+import { logPostHogInfo, posthog } from "@/lib/posthog";
 import { motion } from "@/theme";
 
 // Changing the category fades cards in and out and eases the rest into place.
@@ -64,7 +65,14 @@ export default function Home() {
       <SearchPrompt
         value={prompt}
         onChangeText={setPrompt}
-        onSubmit={(q) => router.navigate({ pathname: "/search", params: { q } })}
+        onSubmit={(q) => {
+          posthog?.capture("search_submitted", { source: "home" });
+          logPostHogInfo("stay search submitted", {
+            event: "stay_search_submitted",
+            source: "home",
+          });
+          router.navigate({ pathname: "/search", params: { q } });
+        }}
         className="mt-5"
       />
 

@@ -11,6 +11,7 @@ import { SocialButtons } from "@/components/auth/social-buttons";
 import { Button, TextField } from "@/components/ui";
 import { authErrorMessage } from "@/lib/auth/errors";
 import { firstError, validateSignUp, type FieldErrors } from "@/lib/auth/validate";
+import { posthog } from "@/lib/posthog";
 
 type Field = "name" | "email" | "password";
 
@@ -54,6 +55,7 @@ export default function SignUp() {
       const sent = await signUp.verifications.sendEmailCode();
       if (sent.error) return setAuthError(authErrorMessage(sent.error));
 
+      posthog?.capture("sign_up_started", { method: "password" });
       router.push({ pathname: "/verify", params: { email, flow: "sign-up" } });
     } catch (e) {
       setAuthError(authErrorMessage(e));

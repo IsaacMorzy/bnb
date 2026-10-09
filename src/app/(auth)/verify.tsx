@@ -10,6 +10,7 @@ import { Alert, Button } from "@/components/ui";
 import { authErrorMessage } from "@/lib/auth/errors";
 import { finalizeOptions } from "@/lib/auth/session";
 import { validateCode } from "@/lib/auth/validate";
+import { posthog } from "@/lib/posthog";
 
 const RESEND_SECONDS = 30;
 
@@ -55,13 +56,15 @@ export default function Verify() {
         if (failed) return setError(authErrorMessage(failed));
         if (signIn.status !== "complete") return setError(authErrorMessage(undefined));
         const { error: unfinished } = await signIn.finalize(finalizeOptions);
-        if (unfinished) setError(authErrorMessage(unfinished));
+        if (unfinished) return setError(authErrorMessage(unfinished));
+        posthog?.capture("sign_in_completed", { method: "email_code" });
       } else {
         const { error: failed } = await signUp.verifications.verifyEmailCode({ code: value });
         if (failed) return setError(authErrorMessage(failed));
         if (signUp.status !== "complete") return setError(authErrorMessage(undefined));
         const { error: unfinished } = await signUp.finalize(finalizeOptions);
-        if (unfinished) setError(authErrorMessage(unfinished));
+        if (unfinished) return setError(authErrorMessage(unfinished));
+        posthog?.capture("sign_up_completed", { method: "email_code" });
       }
     } catch (e) {
       setError(authErrorMessage(e));
@@ -83,6 +86,7 @@ export default function Verify() {
       const { error: failed } =
         flow === "sign-in" ? await signIn.mfa.sendEmailCode() : await signUp.verifications.sendEmailCode();
       if (failed) return setError(authErrorMessage(failed));
+      posthog?.capture("verification_code_resent", { auth_flow: flow });
       setResent(true);
       setWait(RESEND_SECONDS);
     } catch (e) {
