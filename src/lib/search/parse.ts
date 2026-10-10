@@ -149,10 +149,26 @@ function takePlace(text: string, knownPlaces: string[]): [ParsedQuery["place"], 
   return [{ label, values }, rest];
 }
 
+// Lowercased, apostrophes dropped, per-night phrasing removed, padded with spaces.
+const normalize = (input: string) =>
+  ` ${input.toLowerCase().replace(/[’']/g, "")} `.replace(/\b(a|per|\/)\s*night\b|\/night|\bnightly\b/g, " ");
+
+/** The place a sentence names, if any (used on the server, where Jev reads the rest). */
+export const findPlace = (input: string, knownPlaces: string[]) => takePlace(normalize(input), knownPlaces)[0];
+
+/** Every value a place filter may hold: stay place names, US states and codes, aliases. */
+export function placeValueSet(knownPlaces: string[]): Set<string> {
+  return new Set([
+    ...knownPlaces,
+    ...Object.keys(usStates),
+    ...Object.values(usStates),
+    ...Object.values(placeAliases),
+  ]);
+}
+
 /** `knownPlaces`: lowercase city, region, country and neighborhood names of every stay. */
 export function parseQuery(input: string, knownPlaces: string[] = []): ParsedQuery {
-  let text = ` ${input.toLowerCase().replace(/[’']/g, "")} `
-    .replace(/\b(a|per|\/)\s*night\b|\/night|\bnightly\b/g, " ");
+  let text = normalize(input);
   const query: ParsedQuery = { amenities: [], terms: [] };
 
   for (const pattern of pricePatterns) {
@@ -242,15 +258,3 @@ export const typeLabels: Record<PropertyType, string> = {
   city: "City",
   villa: "Villas",
 };
-
-/** The exact constraints in words, for the empty state. */
-export function describeQuery(query: ParsedQuery): string[] {
-  return [
-    query.type && typeLabels[query.type],
-    query.place?.label,
-    query.maxPrice !== undefined && `Under $${query.maxPrice}`,
-    query.guests !== undefined && `${query.guests}+ guests`,
-    query.pets && "Pet Friendly",
-    ...query.amenities.map((a) => amenityLabels[a]),
-  ].filter((label): label is string => !!label);
-}

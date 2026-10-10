@@ -9,10 +9,19 @@ import { SearchBar } from "@/components/search/search-bar";
 import { SearchChips } from "@/components/search/search-chips";
 import { SortMenu } from "@/components/search/sort-menu";
 import { Badge, Button, IconButton, Text } from "@/components/ui";
-import { useKnownPlaces, useSearchStays } from "@/hooks/use-search-stays";
+import { useSearchStays } from "@/hooks/use-search-stays";
 import { posthog } from "@/lib/posthog";
-import { describeQuery, parseQuery, type ParsedQuery } from "@/lib/search/parse";
-import { chipsFor, hasChip, stayTags, toggleChip, type SortOption, type StayTag } from "@/lib/search/query";
+import type { SearchIntent } from "@/lib/search/intent";
+import {
+  askedFor,
+  chipsFor,
+  describeIntent,
+  hasChip,
+  stayTags,
+  toggleChip,
+  type SortOption,
+  type StayTag,
+} from "@/lib/search/query";
 import type { SearchStay } from "@/lib/stays";
 import { motion } from "@/theme";
 
@@ -23,8 +32,10 @@ export default function Search() {
   const { q = "" } = useLocalSearchParams<{ q?: string }>();
   const [text, setText] = useState(q);
   const [shownQ, setShownQ] = useState(q);
-  // Chip toggles refine the submitted sentence until the next one is sent.
-  const [edited, setEdited] = useState<ParsedQuery | null>(null);
+  // How the server read the submitted sentence. Chip toggles refine it until
+  // the next sentence; sort and toggles send it back, so Jev reads it once.
+  const [interpreted, setInterpreted] = useState<SearchIntent | null>(null);
+  const [edited, setEdited] = useState<SearchIntent | null>(null);
   const [sort, setSort] = useState<SortOption>("best");
   const input = useRef<TextInput>(null);
 
@@ -32,6 +43,7 @@ export default function Search() {
   if (q !== shownQ) {
     setShownQ(q);
     setText(q);
+    setInterpreted(null);
     setEdited(null);
   }
 
@@ -42,11 +54,13 @@ export default function Search() {
     }, [q]),
   );
 
-  const places = useKnownPlaces();
-  const submitted = useMemo(() => (places ? parseQuery(q, places) : undefined), [q, places]);
-  const query = edited ?? submitted;
-  const chips = useMemo(() => (submitted ? chipsFor(submitted) : []), [submitted]);
-  const { result, error, retry } = useSearchStays(query, sort);
+  const base = edited ?? interpreted;
+  const { result, error, retry } = useSearchStays(base ? { intent: base } : { q }, sort);
+  if (!interpreted && result?.key === JSON.stringify([{ q }, sort])) setInterpreted(result.intent);
+  // Until the new sentence is read, the results on screen keep their own reading.
+  const query = base ?? result?.intent;
+  const chips = useMemo(() => (interpreted ? chipsFor(interpreted) : []), [interpreted]);
+  const described = query ? describeIntent(query) : [];
 
   const clear = () => {
     setEdited(null);
@@ -109,7 +123,7 @@ export default function Search() {
             {/* Keyed by request, so every new search, toggle or sort replays the entrance. */}
             <View key={result.key} className="mt-4 gap-4">
               {result.stays.map((stay, index) => (
-                <StaggeredResult key={stay.id} stay={stay} tags={stayTags(stay, query)} index={index} />
+                <StaggeredResult key={stay.id} stay={stay} tags={stayTags(stay, askedFor(query))} index={index} />
               ))}
             </View>
           </>
@@ -118,13 +132,13 @@ export default function Search() {
             <Text variant="title" className="text-center">
               No stays match that yet
             </Text>
-            {describeQuery(query).length > 0 && (
+            {described.length > 0 && (
               <>
                 <Text tone="muted" className="text-center">
                   Every stay has to meet these:
                 </Text>
                 <View className="flex-row flex-wrap justify-center gap-2">
-                  {describeQuery(query).map((label) => (
+                  {described.map((label) => (
                     <Badge key={label} label={label} tone="info" />
                   ))}
                 </View>

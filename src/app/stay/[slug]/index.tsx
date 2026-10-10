@@ -40,7 +40,7 @@ export default function StayScreen() {
       stay
         ? stayTags(
             { amenities: stay.amenities, petsAllowed: stay.houseRules?.petsAllowed ?? false },
-            { amenities: [], terms: [] },
+            { amenities: [], pets: false },
             4,
           )
         : [],

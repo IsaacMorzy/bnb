@@ -1,11 +1,12 @@
 import type { IconName } from "@/components/ui";
 import type { Amenity, SearchStay } from "@/lib/stays";
 
-import { amenityLabels, typeLabels, type ParsedQuery } from "./parse";
+import type { SearchIntent, Vibe } from "./intent";
+import { amenityLabels, typeLabels } from "./parse";
 
-// Builds the GROQ for Search from a parsed query. Exact constraints filter,
-// soft terms rank through score(). Only param names are written into the
-// query text; every value the guest typed goes in as a param.
+// Search helpers for the app: sort options, chips over the SearchIntent the
+// server returns, and "why it matched" card tags. The GROQ itself is built on
+// the server (src/lib/server/search-groq.ts).
 
 export type SortOption = "best" | "priceAsc" | "priceDesc" | "rating";
 
@@ -16,96 +17,18 @@ export const sortLabels: Record<SortOption, string> = {
   rating: "Top rated",
 };
 
-const MAX_RESULTS = 50;
-
-const byRating = "rating desc, reviewCount desc";
-const orders: Record<Exclude<SortOption, "best">, string> = {
-  priceAsc: `pricePerNight asc, ${byRating}`,
-  priceDesc: `pricePerNight desc, ${byRating}`,
-  rating: byRating,
-};
-
-const projection = /* groq */ `{
-  "id": _id,
-  "slug": slug.current,
-  title,
-  type,
-  city,
-  region,
-  country,
-  rating,
-  reviewCount,
-  pricePerNight,
-  amenities,
-  "petsAllowed": houseRules.petsAllowed == true,
-  "imageUrl": photos[0].asset->url,
-  "imageAlt": photos[0].alt
-}`;
-
-export function buildSearchQuery(parsed: ParsedQuery, sort: SortOption) {
-  const params: Record<string, unknown> = {};
-  const filters = ['_type == "property"', "defined(slug.current)"];
-
-  if (parsed.type) {
-    params.type = parsed.type;
-    filters.push("type == $type");
-  }
-  if (parsed.maxPrice !== undefined) {
-    params.maxPrice = parsed.maxPrice;
-    filters.push("pricePerNight <= $maxPrice");
-  }
-  if (parsed.guests !== undefined) {
-    params.guests = parsed.guests;
-    filters.push("maxGuests >= $guests");
-  }
-  if (parsed.pets) filters.push("houseRules.petsAllowed == true");
-  if (parsed.amenities.length) {
-    params.amenities = parsed.amenities;
-    filters.push("count(amenities[@ in $amenities]) == count($amenities)");
-  }
-  if (parsed.place) {
-    params.places = parsed.place.values;
-    filters.push("count([lower(city), lower(region), lower(country), lower(neighborhood)][@ in $places]) > 0");
-  }
-
-  // One pair of boosts per soft word: a vibe tag counts three times as much as
-  // the word appearing in the copy.
-  const boosts = parsed.terms.flatMap((term, i) => {
-    params[`t${i}`] = term;
-    return [`boost(vibes match $t${i}, 3)`, `boost([title, summary, description, highlights, neighborhood] match $t${i}, 1)`];
-  });
-
-  const filter = filters.join(" && ");
-  const ranked =
-    sort === "best"
-      ? boosts.length
-        ? `| score(${boosts.join(", ")}) | order(_score desc, ${byRating})`
-        : `| order(${byRating})`
-      : `| order(${orders[sort]})`;
-
-  const query = /* groq */ `{
-    "total": count(*[${filter}]),
-    "stays": *[${filter}] ${ranked} [0...${MAX_RESULTS}]${projection}
-  }`;
-  return { query, params };
-}
-
 // ---- Chips -----------------------------------------------------------------
 
 export type SearchChip =
-  | { kind: "type"; value: NonNullable<ParsedQuery["type"]> }
+  | { kind: "type"; value: SearchIntent["types"]["required"][number] }
   | { kind: "price"; value: number }
   | { kind: "guests"; value: number }
   | { kind: "pets" }
   | { kind: "amenity"; value: Amenity }
-  | { kind: "vibe"; value: string };
+  | { kind: "vibe"; value: Vibe };
 
-// Vibe words stays are tagged with. Only these show as chips; other soft words
-// still rank but stay invisible.
-const knownVibes = new Set([
-  "quiet", "cozy", "secluded", "romantic", "peaceful", "luxury", "family", "lively",
-  "walkable", "rustic", "modern", "views", "nature", "minimal", "design", "laid-back",
-]);
+// A vibe shows as a selected chip once Jev reads it this strongly.
+const CHIP_VIBE_AT = 0.6;
 
 const suggestions: SearchChip[] = [
   { kind: "price", value: 300 },
@@ -137,49 +60,63 @@ export function chipLabel(chip: SearchChip) {
 }
 
 /**
- * The chip row for a submitted query: its constraints, then suggestions that
- * don't conflict. Toggling doesn't reorder it; `hasChip` says what's selected.
+ * The chip row for a submitted query: what was read from it, then suggestions
+ * that don't conflict. Toggling doesn't reorder it; `hasChip` says what's selected.
  */
-export function chipsFor(parsed: ParsedQuery): SearchChip[] {
+export function chipsFor(intent: SearchIntent): SearchChip[] {
   const active: SearchChip[] = [
-    ...(parsed.type ? [{ kind: "type", value: parsed.type } as const] : []),
-    ...(parsed.maxPrice !== undefined ? [{ kind: "price", value: parsed.maxPrice } as const] : []),
-    ...(parsed.guests !== undefined ? [{ kind: "guests", value: parsed.guests } as const] : []),
-    ...(parsed.pets ? [{ kind: "pets" } as const] : []),
-    ...parsed.amenities.map((value) => ({ kind: "amenity", value }) as const),
-    ...parsed.terms.filter((t) => knownVibes.has(t)).map((value) => ({ kind: "vibe", value }) as const),
+    ...intent.types.required.map((value) => ({ kind: "type", value }) as const),
+    ...(intent.maxPrice !== undefined ? [{ kind: "price", value: intent.maxPrice } as const] : []),
+    ...(intent.guests !== undefined ? [{ kind: "guests", value: intent.guests } as const] : []),
+    ...(intent.pets === "wanted" ? [{ kind: "pets" } as const] : []),
+    ...intent.amenities.required.map((value) => ({ kind: "amenity", value }) as const),
+    ...intent.vibes.preferred
+      .filter((v) => v.weight >= CHIP_VIBE_AT)
+      .map(({ value }) => ({ kind: "vibe", value }) as const),
   ];
   const activeKeys = new Set(active.map(chipKey));
   const extra = suggestions
-    .filter((s) => !activeKeys.has(chipKey(s)) && !(s.kind === "price" && parsed.maxPrice !== undefined))
+    .filter((s) => !activeKeys.has(chipKey(s)) && !(s.kind === "price" && intent.maxPrice !== undefined))
     .slice(0, MAX_SUGGESTIONS);
   return [...active, ...extra];
 }
 
-export function hasChip(parsed: ParsedQuery, chip: SearchChip) {
+export function hasChip(intent: SearchIntent, chip: SearchChip) {
   switch (chip.kind) {
     case "type":
-      return parsed.type === chip.value;
+      return intent.types.required.includes(chip.value);
     case "price":
-      return parsed.maxPrice === chip.value;
+      return intent.maxPrice === chip.value;
     case "guests":
-      return parsed.guests === chip.value;
+      return intent.guests === chip.value;
     case "pets":
-      return !!parsed.pets;
+      return intent.pets === "wanted";
     case "amenity":
-      return parsed.amenities.includes(chip.value);
+      return intent.amenities.required.includes(chip.value);
     case "vibe":
-      return parsed.terms.includes(chip.value);
+      return intent.vibes.preferred.some((v) => v.value === chip.value && v.weight >= CHIP_VIBE_AT);
   }
 }
 
-/** Adds the chip's constraint to the query, or removes it when it's already there. */
-export function toggleChip(parsed: ParsedQuery, chip: SearchChip, on: boolean): ParsedQuery {
-  const next: ParsedQuery = { ...parsed, amenities: [...parsed.amenities], terms: [...parsed.terms] };
+/** On: the chip's constraint becomes required (vibes: preferred, full weight). Off: it's dropped everywhere. */
+export function toggleChip(intent: SearchIntent, chip: SearchChip, on: boolean): SearchIntent {
+  const without = <T>(b: SearchIntent["types"] | SearchIntent["amenities"], value: T) => ({
+    required: b.required.filter((x) => x !== value),
+    avoided: b.avoided.filter((x) => x !== value),
+    preferred: b.preferred.filter((x) => x.value !== value),
+  });
+  const next: SearchIntent = { ...intent };
   switch (chip.kind) {
-    case "type":
-      next.type = on ? chip.value : undefined;
+    case "type": {
+      const types = without(intent.types, chip.value) as SearchIntent["types"];
+      next.types = on ? { ...types, required: [...types.required, chip.value] } : types;
       break;
+    }
+    case "amenity": {
+      const amenities = without(intent.amenities, chip.value) as SearchIntent["amenities"];
+      next.amenities = on ? { ...amenities, required: [...amenities.required, chip.value] } : amenities;
+      break;
+    }
     case "price":
       next.maxPrice = on ? chip.value : undefined;
       break;
@@ -187,17 +124,43 @@ export function toggleChip(parsed: ParsedQuery, chip: SearchChip, on: boolean): 
       next.guests = on ? chip.value : undefined;
       break;
     case "pets":
-      next.pets = on || undefined;
+      next.pets = on ? "wanted" : undefined;
+      next.petsWeight = undefined;
       break;
-    case "amenity":
-      next.amenities = parsed.amenities.filter((a) => a !== chip.value).concat(on ? [chip.value] : []);
+    case "vibe": {
+      const preferred = intent.vibes.preferred.filter((v) => v.value !== chip.value);
+      next.vibes = {
+        preferred: on ? [...preferred, { value: chip.value, weight: 1 }] : preferred,
+        avoided: intent.vibes.avoided.filter((v) => v !== chip.value),
+      };
       break;
-    case "vibe":
-      next.terms = parsed.terms.filter((t) => t !== chip.value).concat(on ? [chip.value] : []);
-      break;
+    }
   }
   return next;
 }
+
+/** Every filter in words, for the empty state: what stays must have, then what they mustn't. */
+export function describeIntent(intent: SearchIntent): string[] {
+  return [
+    ...intent.types.required.map((t) => typeLabels[t]),
+    intent.place?.label,
+    intent.maxPrice !== undefined && `Under $${intent.maxPrice}`,
+    intent.minPrice !== undefined && `From $${intent.minPrice}`,
+    intent.guests !== undefined && `${intent.guests}+ guests`,
+    intent.bedrooms !== undefined && `${intent.bedrooms}+ bedrooms`,
+    intent.pets === "wanted" && "Pet Friendly",
+    ...intent.amenities.required.map((a) => amenityLabels[a]),
+    ...intent.types.avoided.map((t) => `Not ${typeLabels[t]}`),
+    intent.pets === "avoided" && "No Pets",
+    ...intent.amenities.avoided.map((a) => `No ${amenityLabels[a]}`),
+  ].filter((label): label is string => !!label);
+}
+
+/** What the guest asked for, for card tags. */
+export const askedFor = (intent: SearchIntent) => ({
+  amenities: intent.amenities.required,
+  pets: intent.pets === "wanted",
+});
 
 // ---- Card tags ("why it matched") -------------------------------------------
 
@@ -236,10 +199,14 @@ const petsTag: StayTag = { key: "pets", label: "Pet Friendly", icon: "pets" };
  * amenity, Pet Friendly when pets are allowed, then its next amenity, then an
  * everyday one.
  */
-export function stayTags(stay: Pick<SearchStay, "amenities" | "petsAllowed">, parsed: ParsedQuery, max = 2): StayTag[] {
+export function stayTags(
+  stay: Pick<SearchStay, "amenities" | "petsAllowed">,
+  asked: { amenities: Amenity[]; pets: boolean },
+  max = 2,
+): StayTag[] {
   const tags: StayTag[] = [
-    ...parsed.amenities.filter((a) => stay.amenities?.includes(a)).map(amenityTag),
-    ...(parsed.pets && stay.petsAllowed ? [petsTag] : []),
+    ...asked.amenities.filter((a) => stay.amenities?.includes(a)).map(amenityTag),
+    ...(asked.pets && stay.petsAllowed ? [petsTag] : []),
   ];
   const standout = tagOrder.filter((a) => stay.amenities?.includes(a));
   const fill = [
