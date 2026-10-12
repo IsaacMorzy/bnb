@@ -3,7 +3,7 @@ import { Image as RNImage } from "expo-image";
 import { styled } from "nativewind";
 import { View } from "react-native";
 
-import { Icon, PressableScale, Text } from "@/components/ui";
+import { Icon, PressableScale, Skeleton, Text } from "@/components/ui";
 import { useFavorite } from "@/lib/favorites";
 import type { StayTag } from "@/lib/search/query";
 import { placeLabel, type SearchStay } from "@/lib/stays";
@@ -28,11 +28,12 @@ export function ResultCard({ stay, tags, onPress }: { stay: SearchStay; tags: St
         accessibilityLabel={stay.imageAlt ?? undefined}
         contentFit="cover"
         transition={200}
-        className="h-38 w-37 rounded-md bg-surface-muted"
+        // Stretches with the details, so large text never overflows the card.
+        className="min-h-40 w-37 self-stretch rounded-md bg-surface-muted"
       />
 
-      <View className="flex-1 justify-between pr-1"
-      >
+      {/* pb-3 keeps the price off the card's bottom edge. */}
+      <View className="flex-1 justify-between pr-1 pb-3">
         <View>
           {/* Leaves room for the heart, which sits over the top-right corner. */}
           <Text variant="cardTitle" numberOfLines={2} className="mr-12">
@@ -111,11 +112,12 @@ function Heart({ id, title }: { id: string; title: string }) {
 export function ResultCardSkeleton() {
   return (
     <View className="flex-row gap-3.5">
-      <View className="h-38 w-37 rounded-md bg-surface-muted" />
+      <Skeleton className="h-40 w-37 rounded-md" />
       <View className="flex-1 gap-3 py-2">
-        <View className="h-5 w-4/5 rounded-full bg-surface-muted" />
-        <View className="h-4 w-3/5 rounded-full bg-surface-muted" />
-        <View className="h-4 w-2/5 rounded-full bg-surface-muted" />
+        <Skeleton className="h-5 w-4/5 rounded-full" />
+        <Skeleton className="h-4 w-3/5 rounded-full" />
+        <Skeleton className="h-4 w-2/5 rounded-full" />
+        <Skeleton className="mt-auto mb-2 h-6 w-1/3 rounded-full" />
       </View>
     </View>
   );

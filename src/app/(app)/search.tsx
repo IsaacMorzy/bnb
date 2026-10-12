@@ -1,14 +1,15 @@
 import { StatusBar } from "expo-status-bar";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { ScrollView, TextInput, View } from "react-native";
+import { RefreshControl, ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeInDown, ReduceMotion } from "react-native-reanimated";
 
+import { LoadError } from "@/components/load-error";
 import { ResultCard, ResultCardSkeleton } from "@/components/search/result-card";
 import { SearchBar } from "@/components/search/search-bar";
 import { SearchChips } from "@/components/search/search-chips";
 import { SortMenu } from "@/components/search/sort-menu";
-import { Badge, Button, IconButton, Text } from "@/components/ui";
+import { Alert, Badge, Chip, EmptyState, IconButton, Text } from "@/components/ui";
 import { useSearchStays } from "@/hooks/use-search-stays";
 import { posthog } from "@/lib/posthog";
 import type { SearchIntent } from "@/lib/search/intent";
@@ -26,6 +27,9 @@ import type { SearchStay } from "@/lib/stays";
 import { motion } from "@/theme";
 
 const MAX_STAGGERED = 6;
+
+// Offered when nothing matched. Each returns stays in Roam's catalog.
+const SUGGESTIONS = ["cabin with a hot tub", "beach house under $400", "city apartment with a workspace"];
 
 export default function Search() {
   const router = useRouter();
@@ -55,7 +59,10 @@ export default function Search() {
   );
 
   const base = edited ?? interpreted;
-  const { result, error, retry } = useSearchStays(base ? { intent: base } : { q }, sort);
+  const { result, pending, error, retry, refresh, refreshing, refreshError, clearRefreshError } = useSearchStays(
+    base ? { intent: base } : { q },
+    sort,
+  );
   if (!interpreted && result?.key === JSON.stringify([{ q }, sort])) setInterpreted(result.intent);
   // Until the new sentence is read, the results on screen keep their own reading.
   const query = base ?? result?.intent;
@@ -68,6 +75,12 @@ export default function Search() {
     router.setParams({ q: "" });
   };
 
+  const search = (next: string) => {
+    setEdited(null);
+    setText(next);
+    router.setParams({ q: next });
+  };
+
   return (
     <ScrollView
       className="flex-1 bg-surface"
@@ -75,6 +88,15 @@ export default function Search() {
       contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => {
+            posthog?.capture("stays_refreshed", { screen: "search" });
+            refresh();
+          }}
+        />
+      }
     >
       <StatusBar style="dark" />
       <View className="flex-row items-center gap-3">
@@ -85,8 +107,7 @@ export default function Search() {
           onChangeText={setText}
           onSubmit={(next) => {
             posthog?.capture("search_submitted", { source: "search" });
-            setEdited(null);
-            router.setParams({ q: next });
+            search(next);
           }}
           className="flex-1"
         />
@@ -105,12 +126,22 @@ export default function Search() {
         </View>
       )}
 
+      {refreshError && result && (
+        <Alert
+          tone="danger"
+          message="Couldn’t refresh. Showing what you had."
+          onDismiss={clearRefreshError}
+          className="mt-5"
+        />
+      )}
+
       {result && query ? (
         result.total > 0 ? (
           <>
             <View className="mt-5 flex-row items-center justify-between">
-              <Text variant="lead" accessibilityLiveRegion="polite">
-                {result.total === 1 ? "1 stay" : `${result.total} stays`}
+              {/* Earlier results stay on screen while a chip, sort or new sentence loads. */}
+              <Text variant="lead" tone={pending ? "muted" : "ink"} accessibilityLiveRegion="polite">
+                {pending ? "Updating…" : result.total === 1 ? "1 stay" : `${result.total} stays`}
               </Text>
               <SortMenu
                 value={sort}
@@ -128,37 +159,54 @@ export default function Search() {
             </View>
           </>
         ) : (
-          <View className="mt-10 items-center gap-4 px-4" accessibilityLiveRegion="polite">
-            <Text variant="title" className="text-center">
-              No stays match that yet
-            </Text>
+          <EmptyState
+            icon="searchOff"
+            title="No stays match that yet"
+            message={
+              described.length > 0
+                ? "Every stay has to meet these:"
+                : "Try describing your stay another way."
+            }
+            action={{ title: "Clear search", onPress: clear }}
+            className="mt-10"
+          >
             {described.length > 0 && (
-              <>
-                <Text tone="muted" className="text-center">
-                  Every stay has to meet these:
-                </Text>
-                <View className="flex-row flex-wrap justify-center gap-2">
-                  {described.map((label) => (
-                    <Badge key={label} label={label} tone="info" />
-                  ))}
-                </View>
-              </>
+              <View className="flex-row flex-wrap justify-center gap-2">
+                {described.map((label) => (
+                  <Badge key={label} label={label} tone="info" />
+                ))}
+              </View>
             )}
-            <Button title="Clear search" variant="secondary" size="sm" onPress={clear} />
-          </View>
+            <Text variant="label" tone="muted" className="mt-3 text-center">
+              Try one of these:
+            </Text>
+            <View className="flex-row flex-wrap justify-center gap-2">
+              {SUGGESTIONS.map((suggestion, index) => (
+                <Chip
+                  key={suggestion}
+                  label={suggestion}
+                  size="xs"
+                  onPress={() => {
+                    posthog?.capture("search_suggestion_tapped", { index });
+                    search(suggestion);
+                  }}
+                />
+              ))}
+            </View>
+          </EmptyState>
         )
       ) : error ? (
-        <View className="mt-10 items-center gap-4 px-4" accessibilityLiveRegion="polite">
-          <Text tone="muted" className="text-center">
-            We couldn’t load stays. Check your connection and try again.
-          </Text>
-          <Button title="Try again" variant="secondary" size="sm" onPress={retry} />
-        </View>
+        <LoadError error={error} subject="stays" onRetry={retry} className="mt-10" />
       ) : (
-        <View className="mt-14 gap-4" accessibilityLabel="Loading stays" accessible>
-          {[0, 1, 2].map((i) => (
-            <ResultCardSkeleton key={i} />
-          ))}
+        <View accessibilityLabel="Finding stays" accessible>
+          <Text variant="lead" tone="muted" className="mt-5">
+            Finding stays…
+          </Text>
+          <View className="mt-4 gap-4">
+            {[0, 1, 2].map((i) => (
+              <ResultCardSkeleton key={i} />
+            ))}
+          </View>
         </View>
       )}
     </ScrollView>

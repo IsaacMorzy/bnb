@@ -7,7 +7,7 @@ import { posthog } from "@/lib/posthog";
 
 export type Category = PropertyType | "all";
 
-const categories: { value: Category; label: string; icon: IconName }[] = [
+export const categories: { value: Category; label: string; icon: IconName }[] = [
   { value: "all", label: "All Stays", icon: "homeFill" },
   { value: "cabin", label: "Cabins", icon: "cabin" },
   { value: "beach", label: "Beach", icon: "beach" },

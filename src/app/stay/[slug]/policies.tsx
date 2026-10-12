@@ -2,8 +2,9 @@ import { useLocalSearchParams } from "expo-router";
 import { useRef } from "react";
 import { ScrollView, View, type LayoutChangeEvent } from "react-native";
 
+import { LoadError } from "@/components/load-error";
 import { PolicyBody } from "@/components/stay/policy-body";
-import { Button, Text } from "@/components/ui";
+import { EmptyState, Spinner, Text } from "@/components/ui";
 import { useStay } from "@/hooks/use-stay";
 import { houseRuleLines } from "@/lib/stay-details";
 
@@ -26,11 +27,14 @@ export default function PoliciesSheet() {
 
   if (!stay) {
     return (
-      <View className="items-center gap-4 bg-surface px-8 py-12">
-        <Text tone="muted" className="text-center">
-          {stay === null ? "This stay isn’t available anymore." : error ? "We couldn’t load these policies." : "Loading policies…"}
-        </Text>
-        {error && <Button title="Try again" variant="secondary" size="sm" onPress={retry} />}
+      <View className="flex-1 bg-surface py-12">
+        {stay === null ? (
+          <EmptyState icon="pinOff" title="This stay isn’t available" message="It may have been removed by its host." />
+        ) : error ? (
+          <LoadError error={error} subject="these policies" onRetry={retry} />
+        ) : (
+          <Spinner size="large" accessibilityLabel="Loading policies" />
+        )}
       </View>
     );
   }

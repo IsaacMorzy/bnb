@@ -43,6 +43,18 @@ export function stayTotal(stay: Pick<StayDetails, "pricePerNight" | "minNights" 
   return { nights, total: stay.pricePerNight * nights + (stay.cleaningFee ?? 0) };
 }
 
+export const formatPrice = (amount: number) => `$${amount.toLocaleString("en-US")}`;
+
+// The Book screen's price breakdown, adding up to `stayTotal`.
+export function priceLines(stay: Pick<StayDetails, "pricePerNight" | "minNights" | "cleaningFee">) {
+  const { nights, total } = stayTotal(stay);
+  const lines = [
+    { key: "nights", label: `${formatPrice(stay.pricePerNight)} × ${nights === 1 ? "1 night" : `${nights} nights`}`, amount: stay.pricePerNight * nights },
+  ];
+  if (stay.cleaningFee) lines.push({ key: "cleaning", label: "Cleaning fee", amount: stay.cleaningFee });
+  return { lines, total };
+}
+
 const responseLabels: Record<ResponseTime, string> = {
   withinHour: "within an hour",
   withinFewHours: "within a few hours",
@@ -53,17 +65,19 @@ const responseLabels: Record<ResponseTime, string> = {
 const joinList = (items: string[]) =>
   items.length < 2 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 
-// The Host sheet's facts. Missing fields are left out.
-export function hostFacts(host: StayHost): string[] {
-  const facts: string[] = [];
+export type HostFactKey = "since" | "response" | "languages";
+
+// The host's facts on a stay, keyed so each gets its glyph. Missing fields are left out.
+export function hostFacts(host: StayHost): { key: HostFactKey; text: string }[] {
+  const facts: { key: HostFactKey; text: string }[] = [];
   if (host.hostingSince) {
     const since = new Date(`${host.hostingSince}T00:00:00`);
     if (!Number.isNaN(since.getTime())) {
-      facts.push(`Hosting since ${since.toLocaleDateString("en-US", { month: "long", year: "numeric" })}`);
+      facts.push({ key: "since", text: `Hosting since ${since.toLocaleDateString("en-US", { month: "long", year: "numeric" })}` });
     }
   }
-  if (host.responseTime) facts.push(`Responds ${responseLabels[host.responseTime]}`);
-  if (host.languages?.length) facts.push(`Speaks ${joinList(host.languages)}`);
+  if (host.responseTime) facts.push({ key: "response", text: `Responds ${responseLabels[host.responseTime]}` });
+  if (host.languages?.length) facts.push({ key: "languages", text: `Speaks ${joinList(host.languages)}` });
   return facts;
 }
 

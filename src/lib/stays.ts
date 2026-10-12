@@ -100,6 +100,7 @@ export type StayDetails = {
   pricePerNight: number;
   cleaningFee?: number | null;
   minNights?: number | null;
+  maxGuests?: number | null;
   amenities: Amenity[] | null;
   photos: { url: string; alt?: string | null }[];
   houseRules: HouseRules;

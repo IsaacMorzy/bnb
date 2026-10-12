@@ -61,6 +61,12 @@ export const icons = {
   success: { ios: "checkmark.circle.fill", android: "check_circle", web: "check_circle" },
   apple: { ios: "apple.logo", android: "phone_iphone", web: "phone_iphone" }, // iOS-only button; Material has no Apple logo
   error: { ios: "exclamationmark.circle.fill", android: "error", web: "error" },
+  wave: { ios: "hand.wave.fill", android: "waving_hand", web: "waving_hand" }, // greeting; the font has no emoji
+  globe: { ios: "globe", android: "language", web: "language" }, // languages a host speaks
+  wifiOff: { ios: "wifi.slash", android: "wifi_off", web: "wifi_off" }, // can't connect
+  warning: { ios: "exclamationmark.triangle", android: "warning", web: "warning" }, // something went wrong
+  searchOff: { ios: "text.magnifyingglass", android: "search_off", web: "search_off" }, // no results
+  pinOff: { ios: "mappin.slash", android: "wrong_location", web: "wrong_location" }, // stay not found
 } as const satisfies Record<string, Exclude<SymbolViewProps["name"], string>>;
 
 export type IconName = keyof typeof icons;

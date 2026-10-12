@@ -1,17 +1,12 @@
 import type { ReactNode } from "react";
-import { ActivityIndicator, Pressable, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
-import { styled } from "nativewind";
+import { Pressable, View, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
 
 import { cn } from "@/lib/cn";
 
 import { Icon } from "./icon";
 import type { IconName } from "./icons";
+import { Spinner } from "./spinner";
 import { Text } from "./text";
-
-// Lets the spinner take its color from a token class.
-const Spinner = styled(ActivityIndicator, {
-  className: { target: "style", nativeStyleMapping: { color: "color" } },
-});
 
 const variants = {
   primary: { container: "bg-primary", text: "button" },
@@ -69,7 +64,7 @@ export function Button({
       {...props}
     >
       {loading ? (
-        <Spinner className="text-ink" />
+        <Spinner tone="ink" />
       ) : (
         <>
           {icon}

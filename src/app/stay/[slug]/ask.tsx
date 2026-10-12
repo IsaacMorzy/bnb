@@ -10,7 +10,8 @@ import { AnswerCard } from "@/components/ask/answer-card";
 import { AskInput } from "@/components/ask/ask-input";
 import { MessageBubble } from "@/components/ask/message-bubble";
 import { TopicChips } from "@/components/ask/topic-chips";
-import { Button, IconButton, Text } from "@/components/ui";
+import { LoadError } from "@/components/load-error";
+import { EmptyState, IconButton, Spinner, Text } from "@/components/ui";
 import { useAsk } from "@/hooks/use-ask";
 import { useStay } from "@/hooks/use-stay";
 import { answerFor, matchTopics, NO_ANSWER, TOPICS, type AnswerCard as AnswerCardData, type TopicKey } from "@/lib/ask";
@@ -104,19 +105,19 @@ export default function AskScreen() {
   let body;
   if (!stay) {
     body = (
-      <View className="flex-1 items-center justify-center gap-4 px-8" accessibilityLiveRegion="polite">
-        <Text tone="muted" className="text-center">
-          {stay === null
-            ? "This stay isn’t available anymore."
-            : error
-              ? "We couldn’t load this stay."
-              : "Loading this stay…"}
-        </Text>
+      <View className="flex-1 justify-center">
         {stay === null ? (
-          <Button title="Back" variant="secondary" size="sm" onPress={back} />
+          <EmptyState
+            icon="pinOff"
+            title="This stay isn’t available"
+            message="It may have been removed by its host."
+            action={{ title: "Back", onPress: back }}
+          />
         ) : error ? (
-          <Button title="Try again" variant="secondary" size="sm" onPress={retry} />
-        ) : null}
+          <LoadError error={error} subject="this stay" onRetry={retry} />
+        ) : (
+          <Spinner size="large" accessibilityLabel="Loading this stay" />
+        )}
       </View>
     );
   } else {

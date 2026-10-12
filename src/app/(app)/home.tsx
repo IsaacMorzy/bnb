@@ -2,14 +2,15 @@ import { useUser } from "@clerk/expo";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { RefreshControl, ScrollView, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition, ReduceMotion } from "react-native-reanimated";
 
 import { Wordmark } from "@/components/brand/wordmark";
-import { CategoryChips, type Category } from "@/components/home/category-chips";
+import { categories, CategoryChips, type Category } from "@/components/home/category-chips";
+import { LoadError } from "@/components/load-error";
 import { PropertyCard } from "@/components/stays/property-card";
 import { SearchPrompt } from "@/components/stays/search-prompt";
-import { Avatar, Button, Icon, PressableScale, Text } from "@/components/ui";
+import { Alert, Avatar, EmptyState, Icon, PressableScale, Skeleton, Text } from "@/components/ui";
 import { useHomeStays } from "@/hooks/use-home-stays";
 import { logPostHogInfo, posthog } from "@/lib/posthog";
 import { motion } from "@/theme";
@@ -26,7 +27,8 @@ export default function Home() {
   const [category, setCategory] = useState<Category>("all");
   const [prompt, setPrompt] = useState("");
 
-  const { stays, error, retry } = useHomeStays(category);
+  const { stays, error, retry, refresh, refreshing, refreshError, clearRefreshError } = useHomeStays(category);
+  const categoryIcon = categories.find((c) => c.value === category)?.icon ?? "homeFill";
 
   return (
     <ScrollView
@@ -35,6 +37,15 @@ export default function Home() {
       contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => {
+            posthog?.capture("stays_refreshed", { screen: "home" });
+            refresh();
+          }}
+        />
+      }
     >
       <StatusBar style="dark" />
 
@@ -45,9 +56,15 @@ export default function Home() {
         <Avatar imageUrl={user?.hasImage ? user.imageUrl : null} name={user?.firstName} />
       </View>
 
-      <Text variant="title" tone="muted" className="mt-3">
-        {user?.firstName ? `Hey, ${user.firstName} 👋` : "Hey there 👋"}
-      </Text>
+      {/* An icon, not an emoji: Plus Jakarta Sans has no emoji glyphs, so iOS draws "?". */}
+      <View className="mt-3 flex-row items-center gap-1.5">
+        <Text variant="title" tone="muted">
+          {user?.firstName ? `Hey, ${user.firstName}` : "Hey there"}
+        </Text>
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Icon name="wave" size={22} tone="primary" />
+        </View>
+      </View>
       <View className="mt-1 flex-row items-center gap-4">
         <Text variant="jumbo" accessibilityRole="header" className="flex-1">
           {"Find your\nnext stay"}
@@ -80,6 +97,15 @@ export default function Home() {
         <CategoryChips value={category} onChange={setCategory} />
       </View>
 
+      {refreshError && stays && (
+        <Alert
+          tone="danger"
+          message="Couldn’t refresh. Showing what you had."
+          onDismiss={clearRefreshError}
+          className="mt-7"
+        />
+      )}
+
       {stays ? (
         stays.length > 0 ? (
           // The first list appears without entrances; only category changes animate.
@@ -93,26 +119,20 @@ export default function Home() {
             </View>
           </LayoutAnimationConfig>
         ) : (
-          <View className="mt-10 items-center gap-2 px-4">
-            <Text variant="title" className="text-center">
-              No stays here yet
-            </Text>
-            <Text tone="muted" className="text-center">
-              Try another category, or describe your stay above.
-            </Text>
-          </View>
+          <EmptyState
+            icon={categoryIcon}
+            title="No stays here yet"
+            message="Try another category, or describe your stay above."
+            action={category === "all" ? undefined : { title: "Show all stays", onPress: () => setCategory("all") }}
+            className="mt-10"
+          />
         )
       ) : error ? (
-        <View className="mt-10 items-center gap-4 px-4" accessibilityLiveRegion="polite">
-          <Text tone="muted" className="text-center">
-            We couldn’t load stays. Check your connection and try again.
-          </Text>
-          <Button title="Try again" variant="secondary" size="sm" onPress={retry} />
-        </View>
+        <LoadError error={error} subject="stays" onRetry={retry} className="mt-10" />
       ) : (
         <View className="mt-7 gap-5" accessibilityLabel="Loading stays" accessible>
           {[0, 1, 2].map((i) => (
-            <View key={i} className="h-68 rounded-xl bg-surface-muted" />
+            <Skeleton key={i} className="h-68 rounded-xl" />
           ))}
         </View>
       )}

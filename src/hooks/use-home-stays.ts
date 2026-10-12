@@ -9,25 +9,31 @@ import type { HomeStay } from "@/lib/stays";
 // chip is instant.
 const cache = new Map<Category, HomeStay[]>();
 
+async function loadStays(category: Category, signal?: AbortSignal) {
+  const rows = await sanityQuery<HomeStay[]>(HOME_STAYS_QUERY, { type: category }, signal);
+  const stays = rows.map((s) => ({ ...s, imageUrl: s.imageUrl ? imageUrl(s.imageUrl) : "" }));
+  cache.set(category, stays);
+  return stays;
+}
+
 // While a new category loads, the list on screen stays until the new one
 // arrives. `stays` is undefined before the first load and after a failed one.
+// A failed refresh keeps the list and reports `refreshError` instead.
 export function useHomeStays(category: Category) {
-  const cached = cache.get(category);
-  const [shown, setShown] = useState(cached);
+  // The latest list lives in state, not only in the module cache: the React
+  // Compiler memoizes `cache.get(category)` by category and would miss a refresh.
+  const [loaded, setLoaded] = useState<{ category: Category; stays: HomeStay[] }>();
   const [failed, setFailed] = useState<{ category: Category; error: Error } | null>(null);
   const [attempt, setAttempt] = useState(0);
-
-  // A cached category shows at once (state adjusted during render, not in an effect).
-  if (cached && cached !== shown) setShown(cached);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState<{ category: Category; error: Error } | null>(null);
 
   useEffect(() => {
     if (cache.has(category)) return;
     const controller = new AbortController();
-    sanityQuery<HomeStay[]>(HOME_STAYS_QUERY, { type: category }, controller.signal)
-      .then((rows) => {
-        const stays = rows.map((s) => ({ ...s, imageUrl: s.imageUrl ? imageUrl(s.imageUrl) : "" }));
-        cache.set(category, stays);
-        setShown(stays);
+    loadStays(category, controller.signal)
+      .then((stays) => {
+        setLoaded({ category, stays });
         setFailed(null);
       })
       .catch((error: Error) => {
@@ -37,10 +43,41 @@ export function useHomeStays(category: Category) {
   }, [category, attempt]);
 
   const error = failed?.category === category ? failed.error : null;
+  const current = loaded?.category === category ? loaded.stays : cache.get(category);
+  // The last list on screen, kept while the next category loads.
+  const [shown, setShown] = useState(current);
+  if (current && current !== shown) setShown(current);
+
   const retry = useCallback(() => {
     setFailed(null);
     setAttempt((n) => n + 1);
   }, []);
 
-  return { stays: cached ?? (error ? undefined : shown), error, retry };
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    setRefreshFailed(null);
+    try {
+      const stays = await loadStays(category);
+      setLoaded({ category, stays });
+      setFailed(null);
+    } catch (e) {
+      // With nothing on screen, the error state shows it; otherwise the list stays.
+      if (cache.has(category)) setRefreshFailed({ category, error: e as Error });
+      else setFailed({ category, error: e as Error });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [category]);
+
+  const clearRefreshError = useCallback(() => setRefreshFailed(null), []);
+
+  return {
+    stays: current ?? (error ? undefined : shown),
+    error,
+    retry,
+    refresh,
+    refreshing,
+    refreshError: refreshFailed?.category === category ? refreshFailed.error : null,
+    clearRefreshError,
+  };
 }

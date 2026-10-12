@@ -1,18 +1,19 @@
+import { useRouter } from "expo-router";
 import { View } from "react-native";
 
-import { Icon, Text } from "@/components/ui";
+import { EmptyState } from "@/components/ui";
 
 // Placeholder until trips are designed and booking exists.
 export default function Trips() {
+  const router = useRouter();
   return (
-    <View className="flex-1 items-center justify-center gap-3 bg-surface px-8">
-      <View className="size-16 items-center justify-center rounded-full bg-surface-muted">
-        <Icon name="calendar" size={28} />
-      </View>
-      <Text variant="title">No trips yet</Text>
-      <Text tone="muted" className="text-center">
-        Stays you book will show up here.
-      </Text>
+    <View className="flex-1 justify-center bg-surface">
+      <EmptyState
+        icon="calendar"
+        title="No trips yet"
+        message="Stays you book will show up here."
+        action={{ title: "Explore stays", onPress: () => router.navigate("/home") }}
+      />
     </View>
   );
 }

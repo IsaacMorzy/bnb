@@ -39,6 +39,7 @@ export const STAY_QUERY = /* groq */ `
     pricePerNight,
     cleaningFee,
     minNights,
+    maxGuests,
     amenities,
     "photos": photos[]{ "url": asset->url, alt },
     houseRules,

@@ -7,9 +7,12 @@ import {
   Badge,
   Button,
   Chip,
+  EmptyState,
   Icon,
   IconButton,
   SegmentedControl,
+  Skeleton,
+  Spinner,
   Stepper,
   Text,
   TextField,
@@ -18,11 +21,13 @@ import {
   type IconName,
   type TextVariant,
 } from "@/components/ui";
-import { ResultCard, ResultTag } from "@/components/search/result-card";
+import { LoadError } from "@/components/load-error";
+import { ResultCard, ResultCardSkeleton, ResultTag } from "@/components/search/result-card";
 import { AmenityRow } from "@/components/stay/amenity-row";
-import { HostRow } from "@/components/stay/host-row";
+import { HostSection } from "@/components/stay/host-section";
 import { PolicyCard } from "@/components/stay/policy-card";
 import { RatingBox } from "@/components/stay/rating-box";
+import { SanityError } from "@/lib/sanity/fetch";
 import type { SearchStay } from "@/lib/stays";
 
 // Design system preview. Open with airbnbrecord://design-system.
@@ -253,8 +258,34 @@ export default function DesignSystem() {
           />
           <PolicyCard icon="chat" tile title="Ask about policies" subtitle="Cancellation, house rules, pets, check-in and more." onPress={() => {}} />
           <PolicyCard icon="policy" title="Moderate cancellation" subtitle="Full refund if you cancel at least 5 days before check-in." onPress={() => {}} />
-          <HostRow host={{ name: "Maya Alvarez", isSuperhost: true }} onPress={() => {}} />
+          <HostSection
+            host={{
+              name: "Maya Alvarez",
+              isSuperhost: true,
+              bio: "I restore old mountain cabins and keep them simple.",
+              hostingSince: "2016-05-01",
+              responseTime: "withinHour",
+              languages: ["English", "Spanish"],
+            }}
+          />
           <Button title="Book this stay" size="lg" />
+        </Section>
+
+        <Section title="States">
+          <View className="gap-3">
+            <Skeleton className="h-5 w-4/5 rounded-full" />
+            <Skeleton className="h-5 w-3/5 rounded-full" />
+            <ResultCardSkeleton />
+          </View>
+          <Spinner className="self-center" />
+          <EmptyState
+            icon="searchOff"
+            title="No stays match that yet"
+            message="Try one of the searches below, or clear your search."
+            action={{ title: "Clear search", onPress: () => {} }}
+          />
+          <LoadError error={new SanityError("Network error", 0)} subject="stays" onRetry={() => {}} />
+          <LoadError error={new SanityError("Sanity query failed (500)", 500)} subject="stays" onRetry={() => {}} />
         </Section>
       </ScrollView>
     </>

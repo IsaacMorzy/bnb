@@ -21,38 +21,50 @@ export class SearchError extends Error {
 // Results already fetched this session, per request and sort.
 const cache = new Map<string, SearchResult>();
 
-// Like Home: the results on screen stay until the next ones arrive. `result`
-// is undefined before the first load and after a failed one.
+async function fetchResults(
+  request: SearchRequest,
+  sort: SortOption,
+  key: string,
+  token: string | null,
+  signal?: AbortSignal,
+): Promise<SearchResult> {
+  // Relative URLs go to the dev server in development (Expo Router API routes).
+  const res = await fetch("/api/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify({ ...request, sort }),
+    signal,
+  });
+  if (!res.ok) throw new SearchError(res.status);
+  const body = (await res.json()) as Omit<SearchResult, "key">;
+  const next = { key, ...body };
+  cache.set(key, next);
+  // The screen sends this reading back next ({ intent }); it answers that too.
+  if ("q" in request) cache.set(JSON.stringify([{ intent: body.intent }, sort]), next);
+  return next;
+}
+
+// Like Home: the results on screen stay until the next ones arrive, and
+// `pending` says newer ones are on the way. `result` is undefined before the
+// first load and after a failed one. A failed refresh keeps the results and
+// reports `refreshError` instead.
 export function useSearchStays(request: SearchRequest | undefined, sort: SortOption) {
   const { getToken } = useAuth();
   const key = request ? JSON.stringify([request, sort]) : undefined;
-  const cached = key ? cache.get(key) : undefined;
-  const [shown, setShown] = useState(cached);
+  // The latest result lives in state, not only in the module cache: the React
+  // Compiler memoizes `cache.get(key)` by key and would miss a refresh.
+  const [loaded, setLoaded] = useState<SearchResult>();
   const [failed, setFailed] = useState<{ key: string; error: Error } | null>(null);
   const [attempt, setAttempt] = useState(0);
-
-  // A cached request shows at once (state adjusted during render, not in an effect).
-  if (cached && cached !== shown) setShown(cached);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState<{ key: string; error: Error } | null>(null);
 
   useEffect(() => {
     if (!request || !key || cache.has(key)) return;
     const controller = new AbortController();
     (async () => {
-      const token = await getToken();
-      // Relative URLs go to the dev server in development (Expo Router API routes).
-      const res = await fetch("/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ ...request, sort }),
-        signal: controller.signal,
-      });
-      if (!res.ok) throw new SearchError(res.status);
-      const body = (await res.json()) as Omit<SearchResult, "key">;
-      const next = { key, ...body };
-      cache.set(key, next);
-      // The screen sends this reading back next ({ intent }); it answers that too.
-      if ("q" in request) cache.set(JSON.stringify([{ intent: body.intent }, sort]), next);
-      setShown(next);
+      const next = await fetchResults(request, sort, key, await getToken(), controller.signal);
+      setLoaded(next);
       setFailed(null);
     })().catch((error: Error) => {
       if (error.name !== "AbortError") setFailed({ key, error });
@@ -63,10 +75,44 @@ export function useSearchStays(request: SearchRequest | undefined, sort: SortOpt
   }, [key, attempt]);
 
   const error = failed && failed.key === key ? failed.error : null;
+  const current = key && loaded?.key === key ? loaded : key ? cache.get(key) : undefined;
+  // The last results on screen, kept while the next request loads.
+  const [shown, setShown] = useState(current);
+  if (current && current !== shown) setShown(current);
+
   const retry = useCallback(() => {
     setFailed(null);
     setAttempt((n) => n + 1);
   }, []);
 
-  return { result: cached ?? (error ? undefined : shown), error, retry };
+  const refresh = useCallback(async () => {
+    if (!request || !key) return;
+    setRefreshing(true);
+    setRefreshFailed(null);
+    try {
+      setLoaded(await fetchResults(request, sort, key, await getToken()));
+      setFailed(null);
+    } catch (e) {
+      // With nothing on screen, the error state shows it; otherwise the results stay.
+      if (cache.has(key)) setRefreshFailed({ key, error: e as Error });
+      else setFailed({ key, error: e as Error });
+    } finally {
+      setRefreshing(false);
+    }
+    // `key` captures `request` and `sort`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, getToken]);
+
+  const clearRefreshError = useCallback(() => setRefreshFailed(null), []);
+
+  return {
+    result: current ?? (error ? undefined : shown),
+    pending: !!key && !current && !error,
+    error,
+    retry,
+    refresh,
+    refreshing,
+    refreshError: refreshFailed && refreshFailed.key === key ? refreshFailed.error : null,
+    clearRefreshError,
+  };
 }

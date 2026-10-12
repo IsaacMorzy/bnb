@@ -2,19 +2,20 @@ import * as Haptics from "expo-haptics";
 import { StatusBar } from "expo-status-bar";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, ScrollView, Share, View } from "react-native";
+import { RefreshControl, ScrollView, Share, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { LoadError } from "@/components/load-error";
 import { AmenityRow } from "@/components/stay/amenity-row";
 import { GoodToKnow } from "@/components/stay/good-to-know";
-import { HostRow } from "@/components/stay/host-row";
+import { HostSection } from "@/components/stay/host-section";
 import { PhotoButton } from "@/components/stay/photo-button";
 import { PhotoGallery } from "@/components/stay/photo-gallery";
 import { PolicyCard } from "@/components/stay/policy-card";
 import { PriceBar } from "@/components/stay/price-bar";
 import { RatingBox } from "@/components/stay/rating-box";
 import { StaySkeleton } from "@/components/stay/stay-skeleton";
-import { Button, Icon, Text } from "@/components/ui";
+import { Alert, EmptyState, Icon, Text } from "@/components/ui";
 import { useStay } from "@/hooks/use-stay";
 import { useFavorite } from "@/lib/favorites";
 import { posthog } from "@/lib/posthog";
@@ -30,7 +31,7 @@ export default function StayScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { stay, error, retry } = useStay(slug);
+  const { stay, error, retry, refresh, refreshing, refreshError, clearRefreshError } = useStay(slug);
   const [saved, toggleSaved] = useFavorite(stay?.id ?? slug);
   // Light status bar over the photo, dark once white content is under it.
   const [pastPhoto, setPastPhoto] = useState(false);
@@ -73,18 +74,18 @@ export default function StayScreen() {
     return (
       <View className="flex-1 bg-surface">
         <StatusBar style="dark" />
-        {stay === null || error ? (
-          <View className="flex-1 items-center justify-center gap-4 px-8" accessibilityLiveRegion="polite">
-            <Text tone="muted" className="text-center">
-              {stay === null
-                ? "This stay isn’t available anymore."
-                : "We couldn’t load this stay. Check your connection and try again."}
-            </Text>
-            {stay === null ? (
-              <Button title="Back" variant="secondary" size="sm" onPress={back} />
-            ) : (
-              <Button title="Try again" variant="secondary" size="sm" onPress={retry} />
-            )}
+        {stay === null ? (
+          <View className="flex-1 justify-center">
+            <EmptyState
+              icon="pinOff"
+              title="This stay isn’t available"
+              message="It may have been removed by its host."
+              action={{ title: "Back", onPress: back }}
+            />
+          </View>
+        ) : error ? (
+          <View className="flex-1 justify-center">
+            <LoadError error={error} subject="this stay" onRetry={retry} />
           </View>
         ) : (
           <StaySkeleton />
@@ -108,10 +109,27 @@ export default function StayScreen() {
         }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: PRICE_BAR_SPACE + insets.bottom }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              posthog?.capture("stays_refreshed", { screen: "stay" });
+              refresh();
+            }}
+          />
+        }
       >
         <PhotoGallery photos={stay.photos} title={stay.title} />
 
         <View className="-mt-2 rounded-t-sm bg-surface px-5 pt-5">
+          {refreshError && (
+            <Alert
+              tone="danger"
+              message="Couldn’t refresh. Showing what you had."
+              onDismiss={clearRefreshError}
+              className="mb-5"
+            />
+          )}
           <View className="flex-row items-start gap-4">
             <Text variant="stayTitle" accessibilityRole="header" numberOfLines={3} className="flex-1">
               {stay.title}
@@ -157,15 +175,7 @@ export default function StayScreen() {
           {stay.host && (
             <>
               <View className="mt-2.5 h-px bg-border" />
-              <View className="-mx-1 mt-1.5">
-                <HostRow
-                  host={stay.host}
-                  onPress={() => {
-                    posthog?.capture("stay_host_opened", { slug });
-                    router.push({ pathname: "/stay/[slug]/host", params: { slug } });
-                  }}
-                />
-              </View>
+              <HostSection host={stay.host} />
             </>
           )}
         </View>
@@ -196,9 +206,8 @@ export default function StayScreen() {
       <PriceBar
         stay={stay}
         onBook={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           posthog?.capture("stay_book_tapped", { slug });
-          Alert.alert("Booking opens soon", "You can’t book stays in Roam yet.", [{ text: "OK" }]);
+          router.push({ pathname: "/stay/[slug]/book", params: { slug } });
         }}
       />
     </View>
