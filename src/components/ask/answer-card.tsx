@@ -1,10 +1,12 @@
 import { Pressable, View } from "react-native";
 
+import { PolicyBody } from "@/components/stay/policy-body";
 import { Icon, Text } from "@/components/ui";
 import type { AnswerCard as AnswerCardData } from "@/lib/ask";
 import { cn } from "@/lib/cn";
 
 // One topic of a reply: where the text comes from, then that text as written.
+// Knowledge Base sections keep their headings, bullets and bold via PolicyBody.
 export function AnswerCard({
   card,
   onOpenPolicies,
@@ -23,11 +25,15 @@ export function AnswerCard({
         </View>
       )}
       <Text variant="subtitle">{card.title}</Text>
-      <View className="gap-1">
-        {card.lines.map((line) => (
-          <Text key={line}>{line}</Text>
-        ))}
-      </View>
+      {card.blocks ? (
+        <PolicyBody blocks={card.blocks} />
+      ) : (
+        <View className="gap-1">
+          {card.lines?.map((line) => (
+            <Text key={line}>{line}</Text>
+          ))}
+        </View>
+      )}
       {card.link && (
         <Pressable
           accessibilityRole="link"

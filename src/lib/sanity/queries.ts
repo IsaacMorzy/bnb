@@ -47,3 +47,18 @@ export const STAY_QUERY = /* groq */ `
     "policies": *[_type == "policy" && kind != "cancellation"]{ kind, title, summary, body }
   }
 `;
+
+// What Ask's API route needs from one stay: its rules and cancellation policy.
+export const ASK_STAY_QUERY = /* groq */ `
+  *[_type == "property" && slug.current == $slug][0]{
+    title,
+    houseRules,
+    "cancellationPolicy": cancellationPolicy->{ kind, title, summary, body }
+  }
+`;
+
+// Every Roam policy as plain text, for checking Knowledge Base sections against
+// the policies they were built from (src/lib/server/policy-kb.ts).
+export const POLICY_TEXT_QUERY = /* groq */ `
+  *[_type == "policy"]{ kind, title, "text": pt::text(body) }
+`;

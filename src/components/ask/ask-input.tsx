@@ -2,6 +2,7 @@ import { useState } from "react";
 import { TextInput, View } from "react-native";
 
 import { Icon, IconButton } from "@/components/ui";
+import { MAX_QUESTION } from "@/lib/ask";
 
 // The gray pill under Ask's chat. Sends the trimmed text and clears; the
 // keyboard stays open for the next question.
@@ -23,6 +24,7 @@ export function AskInput({ onSend }: { onSend: (text: string) => void }) {
         value={text}
         onChangeText={setText}
         onSubmitEditing={send}
+        maxLength={MAX_QUESTION}
         placeholder="Ask about this stay"
         returnKeyType="send"
         submitBehavior="submit"

@@ -1,11 +1,15 @@
 import type { IconName } from "@/components/ui/icons";
 import { houseRuleParts, type HouseRuleKey } from "@/lib/stay-details";
-import type { Policy, StayDetails } from "@/lib/stays";
+import type { Policy, PolicyBlock, StayDetails } from "@/lib/stays";
 
-// "Ask about this stay": a question becomes topics, and each topic becomes an
-// answer card holding the stay's own text or Roam's policy text, word for word.
-// Nothing is generated. Keyword matching stands in for Jev until policy Q&A
-// moves into an API route.
+// "Ask about this stay": every answer card holds the stay's own text, Roam's
+// policy text, or a checked Knowledge Base section, word for word. Nothing is
+// generated. Questions go to POST /api/ask, where Jev picks the passages
+// (src/lib/server/policy-answers.ts). The keyword matching below is the
+// fallback when that route fails; the card builders are shared by both.
+
+/** Longest question the app sends and the route accepts. */
+export const MAX_QUESTION = 300;
 
 export type TopicKey = "cancellation" | "checkIn" | "pets" | "houseRules" | "payment" | "damage" | "guestRefund";
 
@@ -68,7 +72,10 @@ export function matchTopics(text: string): TopicKey[] {
 export type AnswerCard = {
   key: string;
   title: string;
-  lines: string[];
+  /** Plain lines: house rules and policy summaries. */
+  lines?: string[];
+  /** Knowledge Base sections as written, rendered by PolicyBody. */
+  blocks?: PolicyBlock[];
   /** Missing only on the no-answer card. */
   source?: { label: string; icon: IconName };
   /** Opens the Policies sheet, at `section` when set. */
@@ -84,12 +91,30 @@ export const NO_ANSWER: AnswerCard = {
   lines: ["Roam’s policies and this stay’s details don’t cover this. Contact Roam support."],
 };
 
-function ruleCard(stay: StayDetails, key: string, title: string, keys: HouseRuleKey[] | "all"): AnswerCard | null {
+/** What the stay cards need, on the server as well as in the app. */
+export type AskStay = Pick<StayDetails, "houseRules" | "cancellationPolicy">;
+
+function rulesCard(key: string, title: string, lines: string[]): AnswerCard | null {
+  if (!lines.length) return null;
+  return { key, title, lines, source: HOUSE_RULES, link: { label: "See all policies" } };
+}
+
+function ruleCard(stay: AskStay, key: string, title: string, keys: HouseRuleKey[] | "all"): AnswerCard | null {
   const lines = houseRuleParts(stay.houseRules)
     .filter((part) => keys === "all" || keys.includes(part.key))
     .map((part) => part.text);
-  if (!lines.length) return null;
-  return { key, title, lines, source: HOUSE_RULES, link: { label: "See all policies" } };
+  return rulesCard(key, title, lines);
+}
+
+/** The house-rule lines Jev picked, in house-rule order, titled by what they cover. */
+export function pickedRulesCard(parts: { key: HouseRuleKey; text: string }[]): AnswerCard | null {
+  const keys = new Set(parts.map((part) => part.key));
+  const title = [...keys].every((k) => k === "checkIn" || k === "checkOut")
+    ? "Check-in and checkout"
+    : keys.size === 1 && keys.has("pets")
+      ? "Pets at this stay"
+      : "House rules";
+  return rulesCard("rules", title, parts.map((part) => part.text));
 }
 
 // A policy answers with its summary; the full body is one tap away in the sheet.
@@ -104,10 +129,13 @@ function policyCard(policy: Policy | null | undefined, source: AnswerCard["sourc
   };
 }
 
+export const cancellationCard = (stay: AskStay) =>
+  policyCard(stay.cancellationPolicy, { label: "Cancellation policy", icon: "policy" });
+
 export function answerFor(stay: StayDetails, topics: TopicKey[]): AnswerCard[] {
   const roam = (kind: string) => policyCard(stay.policies.find((p) => p.kind === kind), ROAM_POLICY);
   const cardsFor: Record<TopicKey, () => (AnswerCard | null)[]> = {
-    cancellation: () => [policyCard(stay.cancellationPolicy, { label: "Cancellation policy", icon: "policy" })],
+    cancellation: () => [cancellationCard(stay)],
     checkIn: () => [ruleCard(stay, "rules-checkIn", "Check-in and checkout", ["checkIn", "checkOut"]), roam("checkIn")],
     pets: () => [ruleCard(stay, "rules-pets", "Pets at this stay", ["pets"]), roam("pets")],
     houseRules: () => [ruleCard(stay, "rules-all", "House rules", "all")],
