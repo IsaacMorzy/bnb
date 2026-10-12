@@ -19,3 +19,8 @@ export function useFavorite(id: string) {
   }, [id]);
   return [isSaved, toggle] as const;
 }
+
+/** How many stays are hearted this session. */
+export function useFavoriteCount() {
+  return useSyncExternalStore(subscribe, () => saved.size);
+}

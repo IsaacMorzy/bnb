@@ -49,6 +49,11 @@ export const STAY_QUERY = /* groq */ `
   }
 `;
 
+// Every Roam policy, for the Roam policies sheet and Profile's policy card.
+export const ROAM_POLICIES_QUERY = /* groq */ `
+  *[_type == "policy"]{ "slug": slug.current, kind, title, summary, body }
+`;
+
 // What Ask's API route needs from one stay: its rules and cancellation policy.
 export const ASK_STAY_QUERY = /* groq */ `
   *[_type == "property" && slug.current == $slug][0]{

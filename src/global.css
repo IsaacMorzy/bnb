@@ -60,6 +60,9 @@
   --text-stay-title: 30px; /* * stay details title */
   --text-stay-title--line-height: 1.0667; /* 32px */
   --text-stay-title--letter-spacing: -1px; /* * */
+  --text-stat: 22px; /* * profile stats */
+  --text-stat--line-height: 1.2727; /* 28px */
+  --text-stat--letter-spacing: -0.5px; /* * */
   --text-card-title: 18px; /* * search result title */
   --text-card-title--line-height: 1.0667; /* 19.2px */
   --text-card-title--letter-spacing: -0.3px; /* * */

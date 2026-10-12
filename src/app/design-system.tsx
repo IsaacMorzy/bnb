@@ -22,6 +22,9 @@ import {
   type TextVariant,
 } from "@/components/ui";
 import { LoadError } from "@/components/load-error";
+import { ProfileCard } from "@/components/profile/profile-card";
+import { SettingsGroup, SettingsRow } from "@/components/profile/settings-group";
+import { StatsCard } from "@/components/profile/stats-card";
 import { ResultCard, ResultCardSkeleton, ResultTag } from "@/components/search/result-card";
 import { AmenityRow } from "@/components/stay/amenity-row";
 import { HostSection } from "@/components/stay/host-section";
@@ -269,6 +272,21 @@ export default function DesignSystem() {
             }}
           />
           <Button title="Book this stay" size="lg" />
+        </Section>
+
+        <Section title="Profile">
+          <ProfileCard name="Joanna Smith" imageUrl={null} location="San Francisco, CA" />
+          <StatsCard
+            stats={[
+              { key: "trips", value: "12", label: "Trips", accessibilityLabel: "12 trips" },
+              { key: "saved", value: "8", label: "Saved", accessibilityLabel: "8 saved" },
+              { key: "rating", value: "4.9", label: "Rating", star: true, accessibilityLabel: "Rating 4.9" },
+            ]}
+          />
+          <SettingsGroup title="Account">
+            <SettingsRow icon="person" label="Personal info" onPress={() => {}} />
+            <SettingsRow icon="card" label="Payment methods" onPress={() => {}} />
+          </SettingsGroup>
         </Section>
 
         <Section title="States">

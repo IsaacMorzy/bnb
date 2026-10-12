@@ -67,6 +67,10 @@ export const icons = {
   warning: { ios: "exclamationmark.triangle", android: "warning", web: "warning" }, // something went wrong
   searchOff: { ios: "text.magnifyingglass", android: "search_off", web: "search_off" }, // no results
   pinOff: { ios: "mappin.slash", android: "wrong_location", web: "wrong_location" }, // stay not found
+  card: { ios: "creditcard", android: "credit_card", web: "credit_card" }, // payment methods
+  suitcase: { ios: "suitcase", android: "luggage", web: "luggage" }, // trips row
+  bell: { ios: "bell", android: "notifications", web: "notifications" },
+  help: { ios: "questionmark.circle", android: "help", web: "help" },
 } as const satisfies Record<string, Exclude<SymbolViewProps["name"], string>>;
 
 export type IconName = keyof typeof icons;

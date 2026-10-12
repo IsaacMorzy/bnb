@@ -75,6 +75,9 @@ export type PolicyBlock = {
 
 export type Policy = { kind: string; title: string; summary?: string | null; body: PolicyBlock[] };
 
+/** A Roam policy on its own (ROAM_POLICIES_QUERY); cancellation has one per tier. */
+export type RoamPolicy = Policy & { slug: string };
+
 export type ResponseTime = "withinHour" | "withinFewHours" | "withinDay";
 
 export type StayHost = {

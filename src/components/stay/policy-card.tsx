@@ -3,8 +3,9 @@ import { View } from "react-native";
 import { Icon, PressableScale, Text, type IconName } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
-// The lavender rows on a stay ("Ask about policies", its cancellation policy).
-// `tile` puts the icon on a darker square, as the Ask row has in the design.
+// The lavender rows on a stay ("Ask about policies", its cancellation policy)
+// and on Profile. `tile` puts the icon on a darker square, as the Ask row has
+// in the design; without one the row is only as tall as its text.
 export function PolicyCard({
   icon,
   title,
@@ -26,7 +27,7 @@ export function PolicyCard({
       transitionProperty={["opacity"]}
       className="flex-row items-center gap-4 rounded-lg bg-lavender-soft py-3 pr-4 pl-3"
     >
-      <View className={cn("size-13.5 items-center justify-center rounded-md", tile && "bg-lavender-muted")}>
+      <View className={cn("w-13.5 items-center justify-center rounded-md", tile && "h-13.5 bg-lavender-muted")}>
         <Icon name={icon} size={tile ? 28 : 30} tone="accent" />
       </View>
       <View className="flex-1">

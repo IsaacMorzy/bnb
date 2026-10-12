@@ -9,6 +9,7 @@ import { Text } from "./text";
 const Image = styled(RNImage, { className: "style" });
 
 const sizes = {
+  xl: { container: "size-27", text: "headline" }, // Profile
   lg: { container: "size-22", text: "heading" },
   md: { container: "size-16", text: "title" },
 } as const;

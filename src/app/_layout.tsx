@@ -118,6 +118,17 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="stay/[slug]/index" />
         <Stack.Screen name="stay/[slug]/ask" />
         <Stack.Screen name="stay/[slug]/book" />
+        <Stack.Screen name="account/personal-info" />
+        <Stack.Screen name="account/[topic]" />
+        <Stack.Screen
+          name="policies"
+          options={{
+            presentation: "formSheet",
+            sheetGrabberVisible: true,
+            sheetAllowedDetents: [0.6, 1],
+            sheetExpandsWhenScrolledToEdge: true,
+          }}
+        />
         <Stack.Screen
           name="stay/[slug]/policies"
           options={{
